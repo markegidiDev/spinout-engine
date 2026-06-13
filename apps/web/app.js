@@ -185,6 +185,7 @@ const state = {
   userId: "",
   userEmail: "",
   sidebarOpen: true,
+  authModalOpen: false,
   recentChats: [],
   analysisProgress: 0,
   analysisError: null,
@@ -312,6 +313,9 @@ function brand(small = false) {
 
 function topbar(active, options = {}) {
   const steps = ["Memo", "Investor Room", "Final Pitch"];
+  const userBtn = state.isAuthenticated
+    ? `<span class="avatar-chip" title="${escapeHtml(state.userEmail)}">${escapeHtml((state.userEmail || "S").slice(0, 1).toUpperCase())}</span>`
+    : `<button class="btn compact" data-action="open-auth-modal">Accedi</button>`;
   return html`<header class="topbar">
     <div class="brand-wrap">
       ${brand(true)}
@@ -322,7 +326,10 @@ function topbar(active, options = {}) {
         .map((step) => `<span class="${active === step ? "active" : ""}">${step}</span>`)
         .join('<span>-&gt;</span>')}
     </div>
-    <div class="session-id">${escapeHtml(currentSessionId())}</div>
+    <div class="topbar-right">
+      <div class="session-id">${escapeHtml(currentSessionId())}</div>
+      ${userBtn}
+    </div>
   </header>`;
 }
 
@@ -351,8 +358,9 @@ function renderLanding() {
     <header class="topbar">
       ${brand()}
       <div class="landing-actions">
-        ${state.isAuthenticated ? `<span class="chip primary">${escapeHtml(state.userEmail || "Workspace")}</span><button class="btn compact" data-action="logout">Log out</button>` : ""}
-        <span class="eyebrow">Hackathon Demo</span>
+        ${state.isAuthenticated
+          ? `<span class="chip primary">${escapeHtml(state.userEmail || "Workspace")}</span><button class="btn compact" data-action="logout">Esci</button>`
+          : `<button class="btn compact" data-action="open-auth-modal">Accedi</button><button class="btn compact primary" data-action="open-auth-modal">Registrati</button>`}
       </div>
     </header>
     <section class="hero">
@@ -366,7 +374,6 @@ function renderLanding() {
         </div>
       </div>
       <div class="hero-visual">
-        ${renderAuthPanel()}
         <div class="paper-preview">
           <div class="preview-page">
             <div class="preview-line primary short"></div>
@@ -810,6 +817,40 @@ function iconDocument() {
   </svg>`;
 }
 
+function iconLogout() {
+  return html`<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3M10 11l3-3-3-3M13 8H6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+function renderAuthModal() {
+  if (!state.authModalOpen) return "";
+  const isRegister = state.authMode === "register";
+  const buttonLabel = state.authLoading ? "Caricamento..." : isRegister ? "Crea account" : "Accedi";
+  return html`<div class="auth-modal-backdrop" data-action="close-auth-modal">
+    <div class="auth-modal-card" data-action="">
+      <div class="auth-modal-header">
+        <div>
+          <div class="section-label">${isRegister ? "Registrazione" : "Login"}</div>
+          <strong>${isRegister ? "Crea il tuo workspace" : "Bentornato"}</strong>
+        </div>
+        <button class="modal-close" data-action="close-auth-modal" aria-label="Chiudi">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+            <path d="M1 1l12 12M13 1 1 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div class="auth-fields">
+        <input id="auth-email" type="email" placeholder="Email" autocomplete="email">
+        <input id="auth-password" type="password" placeholder="Password" autocomplete="${isRegister ? "new-password" : "current-password"}">
+      </div>
+      ${state.authError ? `<p class="auth-error">${escapeHtml(state.authError)}</p>` : ""}
+      <button class="btn primary full" data-action="${isRegister ? "register" : "login"}" ${state.authLoading ? "disabled" : ""}>${state.authLoading ? '<span class="spinner-sm"></span> ' : ""}${buttonLabel}</button>
+      <button class="auth-switch-btn" data-action="toggle-auth">${isRegister ? "Hai già un account? Accedi" : "Non hai un account? Registrati"}</button>
+    </div>
+  </div>`;
+}
+
 function renderToasts() {
   return html`<div class="toast-stack">${state.toasts.map((item) => `<div class="toast">${escapeHtml(item.message)}</div>`).join("")}</div>`;
 }
@@ -828,7 +869,7 @@ function render() {
             : state.screen === "investor"
               ? renderInvestor()
               : renderFinal();
-  app.innerHTML = `<div class="app-shell ${state.isAuthenticated ? "with-sidebar" : ""}">${renderToasts()}${state.isAuthenticated ? renderSidebar(content) : content}</div>`;
+  app.innerHTML = `<div class="app-shell ${state.isAuthenticated ? "with-sidebar" : ""}">${renderToasts()}${state.isAuthenticated ? renderSidebar(content) : content}${renderAuthModal()}</div>`;
 }
 
 function renderSidebar(content) {
@@ -856,6 +897,7 @@ function renderSidebar(content) {
       <div class="sidebar-user">
         <span class="avatar-mini">${escapeHtml((state.userEmail || "S").slice(0, 1).toUpperCase())}</span>
         <span class="sidebar-email">${escapeHtml(state.userEmail || "Workspace")}</span>
+        ${state.sidebarOpen ? `<button class="sidebar-logout" data-action="logout" title="Esci">${iconLogout()}</button>` : ""}
       </div>
     </aside>
     <div class="workspace-main">${content}</div>
@@ -1200,6 +1242,7 @@ async function handleAuthAction(action) {
     state.isAuthenticated = true;
     state.userId = credential.user?.uid || "";
     state.userEmail = credential.user?.email || email;
+    state.authModalOpen = false;
     state.screen = "upload";
     toast(action === "register" ? "Account creato" : "Login effettuato");
   } catch (error) {
@@ -1216,6 +1259,18 @@ app.addEventListener("click", async (event) => {
   if (!actionEl) return;
   const action = actionEl.dataset.action;
   if (action === "home") setScreen("landing");
+  if (action === "open-auth-modal") {
+    state.authModalOpen = true;
+    state.authError = null;
+    render();
+  }
+  if (action === "close-auth-modal") {
+    if (event.target === actionEl || actionEl.classList.contains("modal-close")) {
+      state.authModalOpen = false;
+      state.authError = null;
+      render();
+    }
+  }
   if (action === "toggle-sidebar") {
     state.sidebarOpen = !state.sidebarOpen;
     render();
@@ -1317,4 +1372,19 @@ app.addEventListener("drop", (event) => {
 });
 
 initFirebaseAuth();
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && state.authModalOpen) {
+    state.authModalOpen = false;
+    state.authError = null;
+    render();
+    return;
+  }
+  if (event.key === "Enter" && state.authModalOpen) {
+    const focused = document.activeElement;
+    if (focused?.id === "auth-email" || focused?.id === "auth-password") {
+      handleAuthAction(state.authMode === "register" ? "register" : "login");
+    }
+  }
+});
 render();

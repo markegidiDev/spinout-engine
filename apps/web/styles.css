@@ -1068,6 +1068,7 @@ input:focus-visible {
   min-height: 100vh;
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
+  transition: grid-template-columns 260ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .workspace-layout.sidebar-open {
@@ -1107,11 +1108,19 @@ input:focus-visible {
   align-items: center;
 }
 
+.workspace-sidebar .brand-name,
+.workspace-sidebar .sidebar-email,
+.workspace-sidebar .chat-title,
+.workspace-sidebar .section-label {
+  transition: opacity 180ms ease;
+}
+
 .sidebar-closed .brand-name,
 .sidebar-closed .sidebar-email,
 .sidebar-closed .chat-title,
 .sidebar-closed .sidebar-section .section-label {
-  display: none;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .sidebar-new {
@@ -1256,6 +1265,144 @@ code {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+/* ── Auth Modal ── */
+.auth-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  animation: modal-backdrop-in 200ms ease both;
+}
+
+.auth-modal-card {
+  width: min(440px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--outline-variant);
+  border-radius: 28px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.55);
+  animation: modal-card-in 260ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.auth-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.auth-modal-header strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 20px;
+}
+
+.modal-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--surface-variant);
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.modal-close:hover {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+.auth-switch-btn {
+  background: none;
+  border: 0;
+  color: var(--on-surface-variant);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 6px;
+  text-align: center;
+  width: 100%;
+  border-radius: 8px;
+  transition: color 160ms ease;
+}
+
+.auth-switch-btn:hover {
+  color: var(--primary);
+}
+
+.spinner-sm {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  vertical-align: middle;
+  animation: spin 720ms linear infinite;
+}
+
+/* ── Topbar user section ── */
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar-chip {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  font-weight: 800;
+  font-size: 13px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  cursor: default;
+}
+
+/* ── Sidebar logout button ── */
+.sidebar-logout {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.sidebar-logout:hover {
+  background: var(--surface-variant);
+  color: var(--primary);
+}
+
+@keyframes modal-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-card-in {
+  from { opacity: 0; transform: scale(0.92) translateY(16px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 @keyframes toast-in {

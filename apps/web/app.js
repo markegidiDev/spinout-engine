@@ -365,7 +365,6 @@ function renderLanding() {
     </header>
     <section class="hero">
       <div class="hero-copy">
-        <span class="chip primary"><span class="status-dot pulse"></span> PAPER-TO-COMPANY AI - 5 AGENTS</span>
         <h1>Spinout<br><span>Engine</span></h1>
         <p>Turn research papers into venture-ready memos, then stress-test the pitch with a synthetic AI investor.</p>
         <div class="hero-actions">

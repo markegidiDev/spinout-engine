@@ -393,12 +393,36 @@ function renderLanding() {
         </div>
       </div>
     </section>
-    <section class="stats" aria-label="Demo metrics">
-      <div class="card stat"><strong>~9s</strong><span>Memo time</span></div>
-      <div class="card stat"><strong>5</strong><span>AI agents</span></div>
-      <div class="card stat"><strong>78</strong><span>Readiness score</span></div>
-      <div class="card stat"><strong>4</strong><span>Investor Q&amp;As</span></div>
+    <section class="stats-strip" aria-label="Demo metrics">
+      <div class="stat-item">
+        <strong>5</strong>
+        <span>AI agents</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <strong>78</strong>
+        <span>Readiness score</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <strong>4</strong>
+        <span>Investor Q&amp;As</span>
+      </div>
     </section>
+    <footer class="landing-footer">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <div class="brand-mark small">${iconSpark(13)}</div>
+          <span class="footer-name">Spinout Engine</span>
+        </div>
+        <p class="footer-tagline">From research paper to venture-ready pitch in seconds.</p>
+        <div class="footer-meta">
+          <span>Built with Claude AI</span>
+          <span class="footer-dot"></span>
+          <span>© ${new Date().getFullYear()}</span>
+        </div>
+      </div>
+    </footer>
   </main>`;
 }
 

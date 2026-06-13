@@ -432,35 +432,104 @@ input:focus-visible {
   font-weight: 700;
 }
 
-.stats {
-  width: min(900px, calc(100% - 48px));
-  margin: 0 auto 26px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+.stats-strip {
+  width: min(680px, calc(100% - 48px));
+  margin: 0 auto 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  background: var(--surface);
+  border: 1px solid var(--outline-variant);
+  border-radius: 24px;
+  padding: 28px 0;
 }
 
-.stat {
+.stat-item {
+  flex: 1;
   text-align: center;
-  padding: 18px 16px;
+  padding: 0 32px;
 }
 
-.stat strong {
+.stat-item strong {
   display: block;
   color: var(--primary);
   font-family: "Space Grotesk", Inter, sans-serif;
-  font-size: 30px;
+  font-size: 42px;
+  font-weight: 700;
   line-height: 1;
+  letter-spacing: -0.02em;
 }
 
-.stat span {
+.stat-item span {
   display: block;
-  margin-top: 6px;
+  margin-top: 7px;
   color: var(--on-surface-variant);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 44px;
+  background: var(--outline-variant);
+  flex: 0 0 auto;
+}
+
+/* ── Footer ── */
+.landing-footer {
+  border-top: 1px solid var(--outline-variant);
+  padding: 32px 28px;
+}
+
+.footer-inner {
+  width: min(900px, 100%);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.footer-name {
+  font-family: "Space Grotesk", Inter, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--on-surface);
+}
+
+.footer-tagline {
+  margin: 0;
+  flex: 1;
+  color: var(--on-surface-variant);
+  font-size: 13px;
+  min-width: 200px;
+}
+
+.footer-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--on-surface-variant);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.footer-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--outline);
+  flex: 0 0 auto;
 }
 
 .center-wrap {

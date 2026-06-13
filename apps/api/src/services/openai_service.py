@@ -64,18 +64,26 @@ class OpenAIService:
                 raise AIProviderError("OpenAI JSON repair failed") from second_error
 
     def _chat_completion_json(self, *, system: str, user: str, model: str) -> str:
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": f"{user}\n\nReturn exactly one JSON object."},
+        ]
         try:
             response = self.client.chat.completions.create(
                 model=model,
-                messages=[
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": f"{user}\n\nReturn exactly one JSON object."},
-                ],
+                messages=messages,
                 response_format={"type": "json_object"},
                 temperature=0.2,
             )
         except Exception as exc:
-            raise AIProviderError("OpenAI request failed") from exc
+            try:
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=0.2,
+                )
+            except Exception as retry_exc:
+                raise AIProviderError("OpenAI request failed") from retry_exc
 
         content = response.choices[0].message.content if response.choices else None
         if not content:
@@ -99,4 +107,3 @@ def _parse_json_object(content: str) -> dict[str, Any]:
     if not isinstance(parsed, dict):
         raise ValueError("Expected a JSON object")
     return parsed
-

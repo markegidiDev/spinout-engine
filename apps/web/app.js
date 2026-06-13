@@ -37,6 +37,10 @@ const pipelineSteps = [
   "Preparing investor room",
 ];
 
+const pipelineStepDelays = [900, 1150, 1250, 1350, 1500, 1650];
+const pipelineCompletePauseMs = 520;
+const agentStageByProgress = [0, 1, 2, 3, 3, 4, 4];
+
 const fallbackAgents = [
   {
     agent: "Paper Intake Agent",
@@ -831,10 +835,9 @@ async function startAnalysis(useFile) {
     return;
   }
   state.screen = "analysis";
-  state.analysisProgress = 0;
   state.analysisError = null;
   state.pendingSessionId = useFile ? "UPLOAD-PENDING" : demoResponse.sessionId;
-  state.agentStatuses = ["running", "queued", "queued", "queued", "queued"];
+  setPipelineProgress(0);
   state.result = null;
   state.evaluation = null;
   state.evalHistory = [];
@@ -849,26 +852,71 @@ async function startAnalysis(useFile) {
 }
 
 async function runPipeline() {
-  for (let step = 1; step <= pipelineSteps.length; step += 1) {
-    await delay(620);
-    state.analysisProgress = step;
-    state.agentStatuses = fallbackAgents.map((_, index) => {
-      if (index < Math.min(step, 5) - 1) return "complete";
-      if (index === Math.min(step, 5) - 1 && step < pipelineSteps.length) return "running";
-      return step >= pipelineSteps.length ? "complete" : "queued";
-    });
+  const request = state.analysisPromise;
+  let settled = false;
+  let payload = null;
+  let failure = null;
+  const guardedRequest = request.then(
+    (result) => {
+      settled = true;
+      payload = result;
+      return result;
+    },
+    (error) => {
+      settled = true;
+      failure = error;
+      return null;
+    }
+  );
+
+  for (let step = 1; step < pipelineSteps.length; step += 1) {
+    await delay(pipelineStepDelays[step - 1] ?? 1200);
+    if (state.analysisPromise !== request || state.screen !== "analysis") return;
+    if (failure) break;
+    setPipelineProgress(step);
     render();
   }
-  try {
-    state.result = await state.analysisPromise;
-    rememberCurrentAnalysis();
-    state.screen = "dashboard";
-  } catch (error) {
-    state.analysisError = error.message || "Document analysis failed";
+
+  if (!settled) await guardedRequest;
+  if (state.analysisPromise !== request || state.screen !== "analysis") return;
+
+  if (failure) {
+    state.analysisError = failure.message || "Document analysis failed";
+    state.analysisPromise = null;
+    state.pendingSessionId = null;
     state.screen = "upload";
     toast(state.analysisError);
+    render();
+    return;
+  }
+
+  state.result = payload;
+  setPipelineProgress(pipelineSteps.length);
+  render();
+  await delay(pipelineCompletePauseMs);
+  if (state.analysisPromise !== request || state.screen !== "analysis") return;
+  state.analysisPromise = null;
+  state.pendingSessionId = null;
+  state.screen = "dashboard";
+  if (state.result) {
+    rememberCurrentAnalysis();
   }
   render();
+}
+
+function setPipelineProgress(progress) {
+  state.analysisProgress = Math.min(progress, pipelineSteps.length);
+  if (state.analysisProgress >= pipelineSteps.length) {
+    state.agentStatuses = fallbackAgents.map(() => "complete");
+    return;
+  }
+
+  const activeAgent = agentStageByProgress[state.analysisProgress] ?? fallbackAgents.length - 1;
+  state.agentStatuses = fallbackAgents.map((_, index) => {
+    if (index < activeAgent) return "complete";
+    if (index === activeAgent) return "running";
+    return "queued";
+  });
 }
 
 function rememberCurrentAnalysis() {

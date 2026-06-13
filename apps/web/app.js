@@ -603,15 +603,6 @@ function renderDashboard() {
           <div class="progress-track" style="margin:10px 0"><div class="progress-fill" style="width:${confidence}%"></div></div>
           <p class="muted" style="font-size:12px">${evidence.length} source snippets found</p>
         </div>
-        <div class="card">
-          <div class="section-label" style="margin-bottom:10px">Evidence</div>
-          <div class="list">
-            ${evidence
-              .slice(0, 4)
-              .map((item) => `<div class="evidence-row"><span class="badge source-badge">${escapeHtml(item.source || "source")}</span><p>${escapeHtml(item.excerpt)}</p></div>`)
-              .join("")}
-          </div>
-        </div>
       </aside>
       <section class="pane memo-pane">
         <div class="section-label">Venture Memo</div>
@@ -640,6 +631,15 @@ function renderDashboard() {
         <div class="card error">
           <h3 style="color:var(--error)">Missing Evidence</h3>
           <div class="list">${(memo.missingEvidence || []).map((item) => `<div class="list-row"><span class="badge danger">Gap</span><span>${escapeHtml(item)}</span></div>`).join("")}</div>
+        </div>
+        <div class="card memo-evidence-card">
+          <h3>Evidence</h3>
+          <div class="list">
+            ${evidence
+              .slice(0, 6)
+              .map((item) => `<div class="evidence-row"><span class="badge source-badge">${escapeHtml(item.source || "source")}</span><p>${escapeHtml(item.excerpt)}</p></div>`)
+              .join("")}
+          </div>
         </div>
       </section>
       <aside class="pane">
@@ -737,7 +737,10 @@ function renderInvestor() {
             <span class="chip ${state.voiceActive ? "primary pulse" : ""}">${voiceStatus}</span>
           </div>
           <div class="wave ${state.voiceActive ? "" : "off"}">${state.voiceActive ? waveBars() : ""}</div>
-          ${hasAudio && !state.voiceActive ? `<button class="btn full" data-action="play-audio" style="margin-top:12px">Play audio</button>` : ""}
+          <div class="audio-controls">
+            <button class="btn full" data-action="play-audio" ${!hasAudio || state.voiceLoading ? "disabled" : ""}>Play audio</button>
+            <button class="btn full" data-action="stop-audio" ${!hasAudio && !state.voiceActive ? "disabled" : ""}>Stop</button>
+          </div>
         </div>
         <button class="btn full" data-action="ask-next">Ask next question ${iconArrow()}</button>
       </aside>
@@ -1074,13 +1077,30 @@ async function analyzeFile(file) {
   return response.json();
 }
 
+async function enterInvestorRoom() {
+  state.screen = "investor";
+  render();
+  if (state.currentAudio?.url || state.currentAudio?.base64) {
+    await playInvestorAudio(state.currentAudio);
+    return;
+  }
+  await loadInvestorQuestion({ advance: false });
+}
+
 async function askInvestorQuestion() {
+  await loadInvestorQuestion({ advance: true });
+}
+
+async function loadInvestorQuestion({ advance }) {
   const memo = currentMemo();
-  state.questionIndex = (state.questionIndex + 1) % Math.min(4, memo.investorQuestions?.length || 4);
+  const questionCount = Math.min(4, memo.investorQuestions?.length || 4);
+  if (advance) {
+    state.questionIndex = (state.questionIndex + 1) % questionCount;
+  }
   state.evaluation = null;
   state.founderAnswer = "";
+  stopInvestorAudio({ silent: true });
   state.currentAudio = null;
-  state.voiceActive = false;
   state.voiceLoading = true;
   render();
   try {
@@ -1091,12 +1111,14 @@ async function askInvestorQuestion() {
     });
     if (response.ok) {
       const payload = await response.json();
-      state.currentQuestion = payload.question;
+      state.currentQuestion = payload.question || memo.investorQuestions?.[state.questionIndex] || demoResponse.memo.investorQuestions[state.questionIndex];
       state.currentPersona = payload.investorPersona;
       state.currentAudio = {
         url: payload.audioUrl || null,
         base64: payload.audioBase64 || null,
       };
+      state.voiceLoading = false;
+      render();
       await playInvestorAudio(state.currentAudio);
     } else {
       state.currentQuestion = memo.investorQuestions?.[state.questionIndex] || demoResponse.memo.investorQuestions[state.questionIndex];
@@ -1142,6 +1164,19 @@ async function playInvestorAudio(audioPayload) {
     state.voiceActive = false;
     state.voiceLoading = false;
     toast("Audio ready. Click Play audio if it does not start automatically.");
+  }
+}
+
+function stopInvestorAudio({ silent = false } = {}) {
+  if (state.audioElement) {
+    state.audioElement.pause();
+    state.audioElement.currentTime = 0;
+  }
+  state.audioElement = null;
+  state.voiceActive = false;
+  state.voiceLoading = false;
+  if (!silent) {
+    render();
   }
 }
 
@@ -1337,9 +1372,10 @@ app.addEventListener("click", async (event) => {
   if (action === "start-demo") startAnalysis(false);
   if (action === "analyze-file") startAnalysis(true);
   if (action === "dashboard") setScreen("dashboard");
-  if (action === "investor-room") setScreen("investor");
-  if (action === "ask-next") askInvestorQuestion();
-  if (action === "play-audio") playInvestorAudio(state.currentAudio);
+  if (action === "investor-room") await enterInvestorRoom();
+  if (action === "ask-next") await askInvestorQuestion();
+  if (action === "play-audio") await playInvestorAudio(state.currentAudio);
+  if (action === "stop-audio") stopInvestorAudio();
   if (action === "submit-answer") submitAnswer();
   if (action === "final") setScreen("final");
   if (action === "copy-memo") {

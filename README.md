@@ -41,6 +41,8 @@ Important values:
 
 - `ALLOWED_ORIGINS`: comma-separated frontend origins. Do not use `*` in production.
 - `OPENAI_API_KEY`: required for real document analysis.
+- `OPENAI_BASE_URL`: optional OpenAI-compatible endpoint such as Scaleway Generative APIs.
+- `OPENAI_FALLBACK_API_KEY`: optional classic OpenAI key if the primary OpenAI-compatible provider fails.
 - `GEMINI_API_KEY`: optional second reviewer.
 - `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID`: optional investor audio.
 - `S3_*`: Scaleway Object Storage credentials for uploads, memo outputs, and MP3 storage.
@@ -145,4 +147,3 @@ docker push ghcr.io/USERNAME/spinout-engine-api:latest
 - Uploaded filenames are sanitized and S3 object keys are UUID scoped.
 - The bucket should remain private. Demo playback uses presigned URLs only.
 - External providers are optional where possible and fail gracefully for the demo.
-

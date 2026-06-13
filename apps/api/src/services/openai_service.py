@@ -17,6 +17,7 @@ class OpenAIService:
     def __init__(self, settings: Settings):
         self.settings = settings
         self._client: OpenAI | None = None
+        self._fallback_client: OpenAI | None = None
 
     def is_configured(self) -> bool:
         return bool(self.settings.OPENAI_API_KEY)
@@ -26,11 +27,25 @@ class OpenAIService:
         if not self.is_configured():
             raise AIProviderError("OpenAI API key is not configured")
         if self._client is None:
-            self._client = OpenAI(
-                api_key=self.settings.OPENAI_API_KEY,
+            kwargs: dict[str, Any] = {
+                "api_key": self.settings.OPENAI_API_KEY,
+                "timeout": self.settings.REQUEST_TIMEOUT_SECONDS,
+            }
+            if self.settings.OPENAI_BASE_URL:
+                kwargs["base_url"] = self.settings.OPENAI_BASE_URL
+            self._client = OpenAI(**kwargs)
+        return self._client
+
+    @property
+    def fallback_client(self) -> OpenAI | None:
+        if not self.settings.OPENAI_FALLBACK_API_KEY:
+            return None
+        if self._fallback_client is None:
+            self._fallback_client = OpenAI(
+                api_key=self.settings.OPENAI_FALLBACK_API_KEY,
                 timeout=self.settings.REQUEST_TIMEOUT_SECONDS,
             )
-        return self._client
+        return self._fallback_client
 
     def complete_json(
         self,
@@ -83,12 +98,36 @@ class OpenAIService:
                     temperature=0.2,
                 )
             except Exception as retry_exc:
-                raise AIProviderError("OpenAI request failed") from retry_exc
+                response = self._fallback_completion(messages=messages, primary_model=model)
 
         content = response.choices[0].message.content if response.choices else None
         if not content:
             raise AIProviderError("OpenAI returned an empty response")
         return content
+
+    def _fallback_completion(self, *, messages: list[dict[str, str]], primary_model: str):
+        fallback_client = self.fallback_client
+        if fallback_client is None:
+            raise AIProviderError("Primary AI request failed and no fallback API key is configured")
+
+        fallback_model = (
+            self.settings.OPENAI_FALLBACK_MODEL_STRONG
+            if primary_model == self.settings.OPENAI_MODEL_STRONG
+            else self.settings.OPENAI_FALLBACK_MODEL_FAST
+        )
+        try:
+            return fallback_client.chat.completions.create(
+                model=fallback_model,
+                messages=messages,
+                response_format={"type": "json_object"},
+                temperature=0.2,
+            )
+        except Exception:
+            return fallback_client.chat.completions.create(
+                model=fallback_model,
+                messages=messages,
+                temperature=0.2,
+            )
 
 
 def _parse_json_object(content: str) -> dict[str, Any]:

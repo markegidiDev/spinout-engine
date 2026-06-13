@@ -17,8 +17,12 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: str = "http://localhost:3000"
 
     OPENAI_API_KEY: str = ""
+    OPENAI_BASE_URL: str = ""
     OPENAI_MODEL_FAST: str = "gpt-5.5-mini"
     OPENAI_MODEL_STRONG: str = "gpt-5.5"
+    OPENAI_FALLBACK_API_KEY: str = ""
+    OPENAI_FALLBACK_MODEL_FAST: str = "gpt-5.4-mini"
+    OPENAI_FALLBACK_MODEL_STRONG: str = "gpt-5.4-mini"
 
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.5-flash"
@@ -55,4 +59,3 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-

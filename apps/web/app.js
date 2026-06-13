@@ -417,8 +417,6 @@ function renderLanding() {
         </div>
         <p class="footer-tagline">From research paper to venture-ready pitch in seconds.</p>
         <div class="footer-meta">
-          <span>Built with Claude AI</span>
-          <span class="footer-dot"></span>
           <span>© ${new Date().getFullYear()}</span>
         </div>
       </div>

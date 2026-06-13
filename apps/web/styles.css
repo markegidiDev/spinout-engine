@@ -531,14 +531,6 @@ input:focus-visible {
   white-space: nowrap;
 }
 
-.footer-dot {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: var(--outline);
-  flex: 0 0 auto;
-}
-
 .center-wrap {
   width: min(560px, calc(100% - 40px));
   margin: 0 auto;

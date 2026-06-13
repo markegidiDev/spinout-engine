@@ -1,4 +1,6 @@
-const API_BASE = new URLSearchParams(window.location.search).get("api") || "http://localhost:8080";
+const API_BASE =
+  new URLSearchParams(window.location.search).get("api") ||
+  "https://spinoutengineapi722de514-spinout-engine-api.functions.fnc.fr-par.scw.cloud";
 
 const palette = {
   bg: "#141210",

@@ -2,7 +2,7 @@
 
 Spinout Engine turns a research paper, deck, or technical note into a venture-ready paper-to-company memo, then creates an AI Investor Room where a synthetic investor stress-tests the founder's pitch.
 
-This repo currently contains the backend API in `apps/api`.
+This repo contains the backend API in `apps/api` and a static frontend in `apps/web`.
 
 ## Backend Stack
 
@@ -14,6 +14,21 @@ This repo currently contains the backend API in `apps/api`.
 - Docker for deploy to Scaleway Serverless Containers
 
 ## Local Setup
+
+Frontend:
+
+```bash
+cd apps/web
+node dev-server.cjs 3000
+```
+
+Open `http://localhost:3000`. The frontend calls `http://localhost:8080` by default. To point it at another API URL, use:
+
+```bash
+http://localhost:3000/?api=https://YOUR-API-URL
+```
+
+Backend:
 
 ```bash
 cd apps/api

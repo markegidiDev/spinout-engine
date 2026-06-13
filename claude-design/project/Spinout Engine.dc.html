@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(128,128,128,.3); border-radius: 3px; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.25} }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    @keyframes springIn {
+      0%   { opacity:0; transform:scale(.8) translateY(16px); }
+      55%  { opacity:1; transform:scale(1.04) translateY(-4px); }
+      100% { opacity:1; transform:scale(1) translateY(0); }
+    }
+    @keyframes springUp {
+      0%   { opacity:0; transform:translateY(24px) scale(.96); }
+      60%  { opacity:1; transform:translateY(-5px) scale(1.01); }
+      100% { opacity:1; transform:translateY(0) scale(1); }
+    }
+    @keyframes toastIn {
+      0%   { opacity:0; transform:translateX(20px) scale(.9); }
+      60%  { opacity:1; transform:translateX(-4px) scale(1.02); }
+      100% { opacity:1; transform:translateX(0) scale(1); }
+    }
+    @keyframes b1  { 0%,100%{height:5px}  50%{height:28px} }
+    @keyframes b2  { 0%,100%{height:18px} 40%{height:5px}  }
+    @keyframes b3  { 0%,100%{height:10px} 60%{height:34px} }
+    @keyframes b4  { 0%,100%{height:22px} 30%{height:6px}  }
+    @keyframes b5  { 0%,100%{height:14px} 70%{height:26px} }
+    @keyframes b6  { 0%,100%{height:8px}  45%{height:20px} }
+    @keyframes b7  { 0%,100%{height:20px} 55%{height:6px}  }
+    @keyframes b8  { 0%,100%{height:12px} 35%{height:30px} }
+    @keyframes b9  { 0%,100%{height:17px} 25%{height:8px}  }
+    @keyframes b10 { 0%,100%{height:7px}  65%{height:24px} }
+    @keyframes b11 { 0%,100%{height:19px} 48%{height:5px}  }
+    @keyframes b12 { 0%,100%{height:11px} 38%{height:29px} }
+    @keyframes dotGrid {
+      0%,100%{opacity:.5} 50%{opacity:.9}
+    }
+  </style>
+</helmet>
+
+<!-- ROOT WRAPPER -->
+<div style="min-height:100vh; background:{{ bg }}; color:{{ onSurf }}; font-family:'Inter',system-ui,sans-serif; transition:background .4s ease,color .3s ease;">
+
+  <!-- TOAST CONTAINER -->
+  <div style="position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:8px; pointer-events:none;">
+    <sc-for list="{{ toasts }}" as="t" hint-placeholder-count="0">
+      <div style="background:{{ primCont }}; color:{{ onPrimCont }}; border-radius:16px; padding:12px 20px; font-size:13px; font-weight:500; animation:toastIn .4s cubic-bezier(.34,1.56,.64,1); box-shadow:0 6px 24px rgba(0,0,0,.3); pointer-events:auto; display:flex; align-items:center; gap:8px;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        {{ t.msg }}
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       SCREEN 1 — LANDING
+  ══════════════════════════════════════════════ -->
+  <sc-if value="{{ isLanding }}" hint-placeholder-val="{{ true }}">
+    <div style="min-height:100vh; position:relative; overflow:hidden; display:flex; flex-direction:column;">
+
+      <!-- Expressive bg blob -->
+      <div style="position:absolute; width:600px; height:600px; border-radius:50%; background:{{ primary }}; opacity:.06; top:-200px; right:-100px; filter:blur(80px); pointer-events:none;"></div>
+      <div style="position:absolute; width:400px; height:400px; border-radius:50%; background:{{ primCont }}; opacity:.08; bottom:-100px; left:-50px; filter:blur(60px); pointer-events:none;"></div>
+
+      <!-- Header -->
+      <div style="position:relative; z-index:1; padding:20px 40px; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:34px; height:34px; border-radius:12px; background:{{ primary }}; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 8px {{ primary }}55;">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="3" fill="{{ onPrimary }}"/><path d="M9 1v2.5M9 14.5V17M1 9h2.5M14.5 9H17" stroke="{{ onPrimary }}" stroke-width="1.5" stroke-linecap="round"/><path d="M3.22 3.22l1.77 1.77M13 13l1.78 1.78M3.22 14.78l1.77-1.77M13 5 l1.78-1.78" stroke="{{ onPrimary }}" stroke-width="1" stroke-linecap="round" opacity=".6"/></svg>
+          </div>
+          <span style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:600; letter-spacing:-.02em;">Spinout Engine</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:11px; color:{{ onSurfVar }}; letter-spacing:.08em; text-transform:uppercase; font-weight:600;">Hackathon Demo</span>
+        </div>
+      </div>
+
+      <!-- Hero -->
+      <div style="position:relative; z-index:1; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 32px 40px; text-align:center;">
+        <!-- Pill badge -->
+        <div style="display:inline-flex; align-items:center; gap:8px; background:{{ primCont }}; color:{{ onPrimCont }}; padding:6px 16px 6px 10px; border-radius:50px; margin-bottom:28px; font-size:12px; font-weight:600; letter-spacing:.04em;">
+          <div style="width:7px; height:7px; border-radius:50%; background:{{ primary }}; animation:pulse 1.8s ease infinite;"></div>
+          PAPER-TO-COMPANY AI · 5 AGENTS
+        </div>
+        <!-- Title -->
+        <h1 style="font-family:'Space Grotesk',sans-serif; font-size:clamp(52px,8vw,96px); font-weight:700; line-height:1.0; letter-spacing:-.05em; margin:0 0 20px; max-width:760px;">
+          <span style="color:{{ onSurf }};">Spinout</span><br>
+          <span style="color:{{ primary }};">Engine</span>
+        </h1>
+        <p style="font-size:clamp(16px,2vw,20px); color:{{ onSurfVar }}; max-width:500px; margin:0 0 44px; line-height:1.6; font-weight:400;">Turn research papers into venture-ready memos — then stress-test the pitch with a synthetic AI investor.</p>
+        <!-- CTAs -->
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:center; margin-bottom:32px;">
+          <button onClick="{{ goUpload }}" style="background:{{ primary }}; color:{{ onPrimary }}; border:none; padding:14px 32px; border-radius:50px; font-size:15px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; display:flex; align-items:center; gap:9px; box-shadow:0 4px 16px {{ primary }}44; transition:transform .35s cubic-bezier(.34,1.56,.64,1),box-shadow .2s ease;" style-hover="transform:scale(1.05) translateY(-2px);box-shadow:0 8px 24px {{ primary }}66;" style-active="transform:scale(.96)">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1v9M5.5 3.5L8 1l2.5 2.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12v2.5h12V12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            Upload paper
+          </button>
+          <button onClick="{{ startDemo }}" style="background:{{ surfVar }}; color:{{ onSurf }}; border:none; padding:14px 32px; border-radius:50px; font-size:15px; font-weight:500; cursor:pointer; font-family:'Inter',sans-serif; transition:transform .35s cubic-bezier(.34,1.56,.64,1),background .2s ease;" style-hover="transform:scale(1.04) translateY(-1px);background:{{ primCont }};color:{{ onPrimCont }};" style-active="transform:scale(.97)">
+            Try demo paper →
+          </button>
+        </div>
+        <p style="font-size:12px; color:{{ outline }};">Built for researchers, founders, and deep-tech teams.</p>
+      </div>
+
+      <!-- Stats bar — M3 Expressive cards -->
+      <div style="position:relative; z-index:1; padding:20px 32px; display:flex; align-items:stretch; justify-content:center; gap:12px; flex-wrap:wrap;">
+        <div style="background:{{ surf }}; border-radius:24px; padding:18px 28px; text-align:center; flex:1; min-width:130px; max-width:180px; ">
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700; color:{{ primary }};">~9s</div>
+          <div style="font-size:11px; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.07em; margin-top:3px; font-weight:600;">Memo time</div>
+        </div>
+        <div style="background:{{ surf }}; border-radius:24px; padding:18px 28px; text-align:center; flex:1; min-width:130px; max-width:180px; ">
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700; color:{{ primary }};">5</div>
+          <div style="font-size:11px; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.07em; margin-top:3px; font-weight:600;">AI Agents</div>
+        </div>
+        <div style="background:{{ surf }}; border-radius:24px; padding:18px 28px; text-align:center; flex:1; min-width:130px; max-width:180px; ">
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700; color:{{ primary }};">73</div>
+          <div style="font-size:11px; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.07em; margin-top:3px; font-weight:600;">Readiness score</div>
+        </div>
+        <div style="background:{{ surf }}; border-radius:24px; padding:18px 28px; text-align:center; flex:1; min-width:130px; max-width:180px; ">
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700; color:{{ primary }};">4</div>
+          <div style="font-size:11px; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.07em; margin-top:3px; font-weight:600;">Investor Q&amp;As</div>
+        </div>
+      </div>
+
+    </div>
+  </sc-if>
+
+  <!-- ═══════════════════════════════════════════
+       SCREEN 2 — UPLOAD
+  ══════════════════════════════════════════════ -->
+  <sc-if value="{{ isUpload }}" hint-placeholder-val="{{ false }}">
+    <div style="height:100vh; display:flex; flex-direction:column;">
+      <div style="flex-shrink:0; padding:16px 32px; display:flex; align-items:center; gap:10px; border-bottom:1px solid {{ outlineVar }};">
+        <button onClick="{{ goHome }}" style="background:{{ surfVar }}; border:none; cursor:pointer; color:{{ onSurfVar }}; display:flex; align-items:center; gap:6px; font-size:13px; padding:7px 14px 7px 10px; border-radius:50px; font-family:'Inter',sans-serif; font-weight:500; transition:transform .3s cubic-bezier(.34,1.56,.64,1),background .2s;" style-hover="transform:scale(1.04);background:{{ primCont }};color:{{ onPrimCont }};">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Back
+        </button>
+        <div style="display:flex; align-items:center; gap:8px; margin-left:4px;">
+          <div style="width:26px; height:26px; border-radius:9px; background:{{ primary }}; display:flex; align-items:center; justify-content:center;"><svg width="13" height="13" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="3" fill="{{ onPrimary }}"/><path d="M9 1v2.5M9 14.5V17M1 9h2.5M14.5 9H17" stroke="{{ onPrimary }}" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+          <span style="font-size:14px; font-weight:600; font-family:'Space Grotesk',sans-serif;">Spinout Engine</span>
+        </div>
+      </div>
+      <div style="flex:1; display:flex; align-items:center; justify-content:center; padding:48px 24px;">
+        <div style="width:100%; max-width:500px;">
+          <h2 style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700; margin:0 0 6px; letter-spacing:-.03em;">Upload your paper</h2>
+          <p style="color:{{ onSurfVar }}; font-size:14px; margin:0 0 28px; line-height:1.5;">5 AI agents will analyze it and build a venture memo in ~9 seconds.</p>
+          <!-- Drop zone -->
+          <div onDragOver="{{ handleDragOver }}" onDragLeave="{{ handleDragLeave }}" onDrop="{{ handleDrop }}" style="border:2px dashed {{ outlineVar }}; border-radius:28px; padding:44px 28px; text-align:center; cursor:pointer; background:{{ surf }}; margin-bottom:16px; transition:border-color .2s,background .2s,transform .35s cubic-bezier(.34,1.56,.64,1);" style-hover="border-color:{{ primary }};background:{{ surfVar }};transform:scale(1.02);">
+            <div style="width:52px; height:52px; background:{{ primCont }}; border-radius:18px; margin:0 auto 16px; display:flex; align-items:center; justify-content:center;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 3v10M9 6l3-3 3 3" stroke="{{ onPrimCont }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v4a1 1 0 001 1h14a1 1 0 001-1v-4" stroke="{{ onPrimCont }}" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </div>
+            <sc-if value="{{ hasFile }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:15px; font-weight:600; color:{{ primary }}; margin-bottom:4px;">{{ uploadFileName }}</div>
+              <div style="font-size:13px; color:{{ onSurfVar }};">Ready to analyze</div>
+            </sc-if>
+            <sc-if value="{{ noFile }}" hint-placeholder-val="{{ true }}">
+              <div style="font-size:15px; font-weight:600; color:{{ onSurf }}; margin-bottom:6px;">Drop file or click to browse</div>
+              <div style="font-size:13px; color:{{ onSurfVar }};">PDF, DOCX, TXT, MD — up to 20 MB</div>
+            </sc-if>
+          </div>
+          <!-- Format chips -->
+          <div style="display:flex; gap:6px; margin-bottom:28px; flex-wrap:wrap;">
+            <span style="background:{{ surfVar }}; color:{{ onSurfVar }}; padding:4px 12px; border-radius:8px; font-size:12px; font-weight:600;">PDF</span>
+            <span style="background:{{ surfVar }}; color:{{ onSurfVar }}; padding:4px 12px; border-radius:8px; font-size:12px; font-weight:600;">DOCX</span>
+            <span style="background:{{ surfVar }}; color:{{ onSurfVar }}; padding:4px 12px; border-radius:8px; font-size:12px; font-weight:600;">TXT</span>
+            <span style="background:{{ surfVar }}; color:{{ onSurfVar }}; padding:4px 12px; border-radius:8px; font-size:12px; font-weight:600;">MD</span>
+            <span style="background:{{ surfVar }}; color:{{ onSurfVar }}; padding:4px 12px; border-radius:8px; font-size:12px; font-weight:600;">max 20 MB</span>
+          </div>
+          <!-- Buttons -->
+          <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px;">
+            <button onClick="{{ startDemo }}" style="background:{{ primary }}; color:{{ onPrimary }}; border:none; padding:16px; border-radius:50px; font-size:15px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; width:100%; box-shadow:0 4px 16px {{ primary }}44; transition:transform .35s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;" style-hover="transform:scale(1.03);box-shadow:0 8px 24px {{ primary }}55;" style-active="transform:scale(.97)">Analyze paper →</button>
+            <button onClick="{{ startDemo }}" style="background:{{ surfVar }}; color:{{ onSurf }}; border:none; padding:15px; border-radius:50px; font-size:14px; font-weight:500; cursor:pointer; font-family:'Inter',sans-serif; width:100%; transition:transform .35s cubic-bezier(.34,1.56,.64,1),background .2s;" style-hover="transform:scale(1.02);background:{{ primCont }};color:{{ onPrimCont }};" style-active="transform:scale(.97)">Use demo paper (edge AI research)</button>
+          </div>
+          <!-- Warning -->
+          <div style="display:flex; align-items:flex-start; gap:10px; background:{{ surf }}; border-radius:16px; padding:14px 16px; border:1px solid {{ outlineVar }};">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;margin-top:1px;"><circle cx="8" cy="8" r="7.5" stroke="{{ outline }}"/><path d="M8 5.5v3.5M8 11h.01" stroke="{{ outline }}" stroke-linecap="round"/></svg>
+            <span style="font-size:12px; color:{{ onSurfVar }}; line-height:1.5;">Demo mode: files are not uploaded in this prototype. Analysis uses pre-loaded mock data.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ═══════════════════════════════════════════
+       SCREEN 3 — ANALYSIS PIPELINE
+  ══════════════════════════════════════════════ -->
+  <sc-if value="{{ isAnalysis }}" hint-placeholder-val="{{ false }}">
+    <div style="min-height:100vh; display:flex; flex-direction:column;">
+      <div style="padding:14px 32px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid {{ outlineVar }};">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="width:26px; height:26px; border-radius:9px; background:{{ primary }}; display:flex; align-items:center; justify-content:center;"><svg width="13" height="13" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="3" fill="{{ onPrimary }}"/><path d="M9 1v2.5M9 14.5V17M1 9h2.5M14.5 9H17" stroke="{{ onPrimary }}" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+          <span style="font-size:14px; font-weight:600; font-family:'Space Grotesk',sans-serif;">Spinout Engine</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; background:{{ surf }}; padding:6px 14px; border-radius:50px;">
+          <div style="width:7px; height:7px; border-radius:50%; background:{{ primary }}; animation:pulse 1.2s ease infinite;"></div>
+          <span style="font-size:12px; color:{{ onSurfVar }}; font-weight:500;">Processing · {{ sessionId }}</span>
+        </div>
+      </div>
+      <div style="flex:1; padding:32px; max-width:1100px; margin:0 auto; width:100%;">
+        <h2 style="font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; margin:0 0 4px; letter-spacing:-.025em;">Analyzing research paper</h2>
+        <p style="font-size:13px; color:{{ onSurfVar }}; margin:0 0 24px;">5 AI agents running in parallel</p>
+        <!-- Progress -->
+        <div style="background:{{ surfVar }}; border-radius:8px; height:8px; overflow:hidden; margin-bottom:8px; border-radius:50px;">
+          <div style="height:100%; background:{{ primary }}; border-radius:50px; transition:width .8s cubic-bezier(.34,1.56,.64,1); width:{{ analysisPercent }};"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:32px;">
+          <span style="font-size:12px; color:{{ onSurfVar }};">{{ analysisStep }} of 7 steps complete</span>
+          <span style="font-size:12px; color:{{ primary }}; font-weight:600;">{{ analysisPercent }}</span>
+        </div>
+        <!-- Two columns -->
+        <div style="display:grid; grid-template-columns:256px 1fr; gap:28px; align-items:start;">
+          <!-- Pipeline steps -->
+          <div style="background:{{ surf }}; border-radius:24px; padding:20px; display:flex; flex-direction:column; gap:4px;">
+            <div style="font-size:11px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:12px;">Pipeline</div>
+            <sc-for list="{{ pipelineSteps }}" as="step" hint-placeholder-count="7">
+              <div style="display:flex; align-items:center; gap:12px; padding:8px 10px; border-radius:16px;">
+                <sc-if value="{{ step.isComplete }}" hint-placeholder-val="{{ false }}">
+                  <div style="width:28px; height:28px; border-radius:50%; background:{{ primary }}; display:flex; align-items:center; justify-content:center; flex-shrink:0; animation:springIn .4s cubic-bezier(.34,1.56,.64,1);">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-6" stroke="{{ onPrimary }}" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  </div>
+                  <span style="font-size:13px; color:{{ primary }}; font-weight:600; line-height:1.3;">{{ step.name }}</span>
+                </sc-if>
+                <sc-if value="{{ step.isActive }}" hint-placeholder-val="{{ false }}">
+                  <div style="width:28px; height:28px; border-radius:50%; background:{{ primCont }}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <div style="width:8px; height:8px; border-radius:50%; background:{{ onPrimCont }}; animation:pulse .9s ease infinite;"></div>
+                  </div>
+                  <span style="font-size:13px; color:{{ onSurf }}; font-weight:600; line-height:1.3;">{{ step.name }}</span>
+                </sc-if>
+                <sc-if value="{{ step.isPending }}" hint-placeholder-val="{{ true }}">
+                  <div style="width:28px; height:28px; border-radius:50%; background:{{ surfVar }}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <div style="width:6px; height:6px; border-radius:50%; background:{{ outlineVar }};"></div>
+                  </div>
+                  <span style="font-size:13px; color:{{ outline }}; line-height:1.3;">{{ step.name }}</span>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+          <!-- Agent cards -->
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div style="font-size:11px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:2px;">AI Agents</div>
+            <sc-for list="{{ agentCards }}" as="agent" hint-placeholder-count="5">
+              <div style="border-radius:20px; padding:16px 18px;">
+                <sc-if value="{{ agent.isComplete }}" hint-placeholder-val="{{ false }}">
+                  <div style="background:{{ primCont }};">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                      <span style="font-size:14px; font-weight:600; color:{{ onPrimCont }};">{{ agent.name }}</span>
+                      <span style="font-size:11px; font-weight:700; padding:3px 12px; border-radius:50px; background:{{ primary }}; color:{{ onPrimary }}>">Complete</span>
+                    </div>
+                    <p style="font-size:12px; color:{{ onPrimCont }}; margin:0 0 10px; opacity:.8; line-height:1.45;">{{ agent.description }}</p>
+                    <div style="background:rgba(0,0,0,.12); border-radius:12px; padding:10px 13px;">
+                      <div style="font-size:10px; font-weight:700; color:{{ onPrimCont }}; text-transform:uppercase; letter-spacing:.07em; margin-bottom:4px; opacity:.7;">Output</div>
+                      <div style="font-size:12px; color:{{ onPrimCont }}; line-height:1.5; opacity:.9;">{{ agent.output }}</div>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ agent.isRunning }}" hint-placeholder-val="{{ false }}">
+                  <div style="background:{{ surf }}; border:2px solid {{ primary }};">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                      <span style="font-size:14px; font-weight:600; color:{{ onSurf }};">{{ agent.name }}</span>
+                      <span style="font-size:11px; font-weight:700; padding:3px 12px; border-radius:50px; background:{{ surfVar }}; color:{{ primary }}; animation:pulse .9s ease infinite;">Running</span>
+                    </div>
+                    <p style="font-size:12px; color:{{ onSurfVar }}; margin:0 0 10px; line-height:1.45;">{{ agent.description }}</p>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <div style="width:14px; height:14px; border:2px solid {{ primary }}; border-top-color:transparent; border-radius:50%; animation:spin .7s linear infinite;"></div>
+                      <span style="font-size:12px; color:{{ primary }}; font-weight:500;">Processing…</span>
+                    </div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ agent.isQueued }}" hint-placeholder-val="{{ true }}">
+                  <div style="background:{{ surf }}; border:1px solid {{ outlineVar }};">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                      <span style="font-size:14px; font-weight:500; color:{{ onSurfVar }};">{{ agent.name }}</span>
+                      <span style="font-size:11px; font-weight:600; padding:3px 12px; border-radius:50px; background:{{ surfVar }}; color:{{ outline }};">Queued</span>
+                    </div>
+                    <p style="font-size:12px; color:{{ outline }}; margin:0; line-height:1.45;">{{ agent.description }}</p>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ═══════════════════════════════════════════
+       SCREEN 4 — DASHBOARD
+  ══════════════════════════════════════════════ -->
+  <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ false }}">
+    <div style="height:100vh; display:flex; flex-direction:column; background:{{ bg }};">
+      <!-- Nav -->
+      <div style="flex-shrink:0; height:56px; padding:0 28px; border-bottom:1px solid {{ outlineVar }}; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="width:26px; height:26px; border-radius:9px; background:{{ primary }}; display:flex; align-items:center; justify-content:center;"><svg width="13" height="13" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="3" fill="{{ onPrimary }}"/><path d="M9 1v2.5M9 14.5V17M1 9h2.5M14.5 9H17" stroke="{{ onPrimary }}" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+          <span style="font-size:13px; font-weight:600; font-family:'Space Grotesk',sans-serif;">Spinout Engine</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:500;">
+          <span style="background:{{ primCont }}; color:{{ onPrimCont }}; padding:4px 12px; border-radius:50px;">Memo</span>
+          <span style="color:{{ outline }};">→</span>
+          <span style="color:{{ outline }};">Investor Room</span>
+          <span style="color:{{ outline }};">→</span>
+          <span style="color:{{ outline }};">Final Pitch</span>
+        </div>
+        <div style="background:{{ surf }}; padding:5px 12px; border-radius:50px; font-size:11px; color:{{ onSurfVar }}; font-family:monospace; font-weight:600;">{{ sessionId }}</div>
+      </div>
+      <!-- 3-column -->
+      <div style="flex:1; overflow:hidden; display:grid; grid-template-columns:260px 1fr 276px;">
+        <!-- LEFT -->
+        <div style="border-right:1px solid {{ outlineVar }}; overflow-y:auto; padding:20px 16px; display:flex; flex-direction:column; gap:14px;">
+          <div style="font-size:10px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em;">Source Document</div>
+          <div style="background:{{ surf }}; border-radius:20px; padding:16px;">
+            <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px;">
+              <div style="width:36px; height:40px; background:{{ primCont }}; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <svg width="14" height="17" viewBox="0 0 14 17" fill="none"><rect x=".75" y=".75" width="12.5" height="15.5" rx="2" stroke="{{ onPrimCont }}" stroke-width="1"/><path d="M3.5 5h7M3.5 8h7M3.5 11h5" stroke="{{ onPrimCont }}" stroke-width=".9" stroke-linecap="round"/></svg>
+              </div>
+              <div>
+                <div style="font-size:12px; font-weight:600; color:{{ onSurf }}; line-height:1.4; margin-bottom:4px;">{{ paperTitle }}</div>
+                <div style="font-size:11px; color:{{ onSurfVar }};">{{ paperAuthors }}</div>
+              </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:6px; padding-top:12px; border-top:1px solid {{ outlineVar }};">
+              <div style="display:flex; justify-content:space-between;"><span style="font-size:11px; color:{{ outline }};">Institution</span><span style="font-size:11px; color:{{ onSurf }}; font-weight:500;">{{ paperInstitution }}</span></div>
+              <div style="display:flex; justify-content:space-between;"><span style="font-size:11px; color:{{ outline }};">Year</span><span style="font-size:11px; color:{{ onSurf }}; font-weight:500;">{{ paperYear }}</span></div>
+              <div style="display:flex; justify-content:space-between;"><span style="font-size:11px; color:{{ outline }};">Pages</span><span style="font-size:11px; color:{{ onSurf }}; font-weight:500;">{{ paperPages }} · {{ paperSize }}</span></div>
+            </div>
+          </div>
+          <div style="background:{{ surf }}; border-radius:20px; padding:16px;">
+            <div style="font-size:10px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:10px;">Evidence Confidence</div>
+            <div style="display:flex; align-items:baseline; gap:6px; margin-bottom:8px;">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:32px; font-weight:700; color:{{ primary }};">{{ paperConfidence }}%</span>
+            </div>
+            <div style="background:{{ surfVar }}; border-radius:50px; height:8px; overflow:hidden; margin-bottom:10px;">
+              <div style="height:100%; background:{{ primary }}; border-radius:50px; width:{{ confBarWidth }}; transition:width .8s cubic-bezier(.34,1.56,.64,1);"></div>
+            </div>
+            <div style="font-size:12px; color:{{ onSurfVar }};"><span style="color:{{ primary }}; font-weight:700;">{{ paperSnippets }}</span> source snippets found</div>
+          </div>
+        </div>
+
+        <!-- CENTER: Memo -->
+        <div style="overflow-y:auto; padding:20px 24px; display:flex; flex-direction:column; gap:10px; border-right:1px solid {{ outlineVar }};">
+          <div style="font-size:10px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:2px;">Venture Memo — EdgePulse</div>
+          <!-- Company Idea featured card -->
+          <div style="background:{{ primCont }}; border-radius:24px; padding:20px 22px;">
+            <div style="font-size:10px; font-weight:700; color:{{ onPrimCont }}; opacity:.7; text-transform:uppercase; letter-spacing:.09em; margin-bottom:7px;">Company Idea</div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:600; color:{{ onPrimCont }}; line-height:1.45;">{{ companyIdea }}</div>
+          </div>
+          <!-- 2-col: Problem + Customer -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div style="background:{{ surf }}; border-radius:20px; padding:15px 16px;">
+              <div style="font-size:10px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:6px;">Problem</div>
+              <div style="font-size:12px; color:{{ onSurfVar }}; line-height:1.55;">{{ problemText }}</div>
+            </div>
+            <div style="background:{{ surf }}; border-radius:20px; padding:15px 16px;">
+              <div style="font-size:10px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:6px;">Target Customer</div>
+              <div style="font-size:12px; color:{{ onSurfVar }}; line-height:1.55;">{{ customerText }}</div>
+            </div>
+          </div>
+          <!-- 2-col: Wedge + Why Now -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div style="background:{{ surf }}; border-radius:20px; padding:15px 16px;">
+              <div style="font-size:10px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:6px;">Initial Wedge</div>
+              <div style="font-size:12px; color:{{ onSurfVar }}; line-height:1.55;">{{ wedgeText }}</div>
+            </div>
+            <div style="background:{{ surf }}; border-radius:20px; padding:15px 16px;">
+              <div style="font-size:10px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:6px;">Why Now</div>
+              <div style="font-size:12px; color:{{ onSurfVar }}; line-height:1.55;">{{ whyNowText }}</div>
+            </div>
+          </div>
+          <div style="background:{{ surf }}; border-radius:20px; padding:15px 16px;">
+            <div style="font-size:10px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:6px;">Product Concept</div>
+            <div style="font-size:12px; color:{{ onSurfVar }}; line-height:1.55;">{{ productText }}</div>
+          </div>
+          <div style="background:{{ surf }}; border-radius:20px; padding:15px 16px; border-left:3px solid {{ primary }};">
+            <div style="font-size:10px; font-weight:700; color:{{ primary }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:6px;">Technical Moat</div>
+            <div style="font-size:12px; color:{{ onSurfVar }}; line-height:1.55;">{{ moatText }}</div>
+          </div>
+          <div style="background:{{ surf }}; border-radius:20px; padding:15px 16px;">
+            <div style="font-size:10px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:6px;">Business Model</div>
+            <div style="font-size:12px; color:{{ onSurfVar }}; line-height:1.55;">{{ modelText }}</div>
+          </div>
+          <!-- Milestones -->
+          <div style="background:{{ surf }}; border-radius:20px; padding:15px 16px;">
+            <div style="font-size:10px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:12px;">30 / 60 / 90-Day Milestones</div>
+            <sc-for list="{{ milestones }}" as="ms" hint-placeholder-count="3">
+              <div style="display:flex; gap:10px; margin-bottom:10px; align-items:flex-start;">
+                <span style="flex-shrink:0; background:{{ primCont }}; color:{{ onPrimCont }}; padding:2px 10px; border-radius:8px; font-size:10px; font-weight:700; white-space:nowrap;">{{ ms.period }}</span>
+                <span style="font-size:12px; color:{{ onSurfVar }}; line-height:1.5;">{{ ms.goal }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <!-- Risks -->
+          <div style="background:{{ surf }}; border-radius:20px; padding:15px 16px;">
+            <div style="font-size:10px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:12px;">Key Risks</div>
+            <sc-for list="{{ risks }}" as="risk" hint-placeholder-count="4">
+              <div style="display:flex; gap:10px; margin-bottom:8px; align-items:flex-start;">
+                <span style="flex-shrink:0; padding:2px 10px; border-radius:8px; font-size:10px; font-weight:700; color:{{ risk.color }}; background:{{ risk.bg }}; text-transform:uppercase; white-space:nowrap;">{{ risk.levelLabel }}</span>
+                <span style="font-size:12px; color:{{ onSurfVar }}; line-height:1.5;">{{ risk.text }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <!-- Missing evidence -->
+          <div style="background:{{ errorSurf }}; border-radius:20px; padding:15px 16px;">
+            <div style="font-size:10px; font-weight:700; color:{{ error }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:10px;">Missing Evidence</div>
+            <sc-for list="{{ missing }}" as="item" hint-placeholder-count="4">
+              <div style="display:flex; gap:8px; margin-bottom:7px; align-items:center;">
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="6" stroke="{{ error }}"/><path d="M6.5 3.5V6.5M6.5 9h.01" stroke="{{ error }}" stroke-linecap="round"/></svg>
+                <span style="font-size:12px; color:{{ onSurfVar }}; line-height:1.4;">{{ item.text }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <!-- RIGHT: Readiness -->
+        <div style="overflow-y:auto; padding:20px 16px; display:flex; flex-direction:column; gap:14px;">
+          <div style="font-size:10px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em;">Investor Readiness</div>
+          <div style="background:{{ surf }}; border-radius:24px; padding:18px; text-align:center;">
+            <div style="width:96px; height:96px; border-radius:50%; background:conic-gradient({{ primary }} 263deg, {{ surfVar }} 263deg); margin:0 auto 10px; display:flex; align-items:center; justify-content:center;">
+              <div style="width:76px; height:76px; border-radius:50%; background:{{ surf }}; display:flex; align-items:center; justify-content:center;">
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:700; color:{{ onSurf }};">73</span>
+              </div>
+            </div>
+            <div style="font-size:12px; color:{{ onSurfVar }};">out of 100</div>
+            <div style="background:{{ primCont }}; color:{{ onPrimCont }}; padding:4px 12px; border-radius:50px; font-size:11px; font-weight:600; margin-top:10px; display:inline-block;">Series A — needs proof points</div>
+          </div>
+          <!-- Claims -->
+          <div style="background:{{ surf }}; border-radius:20px; padding:15px;">
+            <div style="font-size:10px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:12px;">Evidence Claims</div>
+            <sc-for list="{{ claims }}" as="claim" hint-placeholder-count="5">
+              <div style="margin-bottom:10px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                  <span style="font-size:11px; color:{{ onSurfVar }};">{{ claim.text }}</span>
+                  <span style="font-size:11px; font-weight:700; color:{{ claim.color }};">{{ claim.confLabel }}</span>
+                </div>
+                <div style="background:{{ surfVar }}; border-radius:50px; height:4px; overflow:hidden;">
+                  <div style="height:100%; background:{{ claim.color }}; border-radius:50px; width:{{ claim.barWidth }};"></div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <!-- Top Qs -->
+          <div style="background:{{ surf }}; border-radius:20px; padding:15px;">
+            <div style="font-size:10px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:12px;">Top Investor Questions</div>
+            <sc-for list="{{ topQuestions }}" as="tq" hint-placeholder-count="5">
+              <div style="display:flex; gap:8px; align-items:flex-start; margin-bottom:8px;">
+                <span style="flex-shrink:0; width:18px; height:18px; border-radius:6px; background:{{ primCont }}; font-size:10px; font-weight:700; color:{{ onPrimCont }}; display:flex; align-items:center; justify-content:center; margin-top:1px;">{{ tq.num }}</span>
+                <span style="font-size:11px; color:{{ onSurfVar }}; line-height:1.45;">{{ tq.q }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <!-- FAB CTA -->
+          <button onClick="{{ goInvestorRoom }}" style="background:{{ primary }}; color:{{ onPrimary }}; border:none; padding:16px; border-radius:50px; font-size:14px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; width:100%; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 6px 20px {{ primary }}44; transition:transform .35s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;" style-hover="transform:scale(1.05) translateY(-2px);box-shadow:0 10px 28px {{ primary }}66;" style-active="transform:scale(.97)">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 4.5L10 7.5 5.5 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Enter Investor Room
+          </button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ═══════════════════════════════════════════
+       SCREEN 5 — INVESTOR ROOM
+  ══════════════════════════════════════════════ -->
+  <sc-if value="{{ isInvestorRoom }}" hint-placeholder-val="{{ false }}">
+    <div style="height:100vh; display:flex; flex-direction:column;">
+      <div style="flex-shrink:0; height:56px; padding:0 28px; border-bottom:1px solid {{ outlineVar }}; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button onClick="{{ goDashboard }}" style="background:{{ surfVar }}; border:none; cursor:pointer; color:{{ onSurfVar }}; display:flex; align-items:center; gap:6px; font-size:12px; padding:7px 14px 7px 10px; border-radius:50px; font-family:'Inter',sans-serif; font-weight:500; transition:transform .3s cubic-bezier(.34,1.56,.64,1),background .2s;" style-hover="transform:scale(1.04);background:{{ primCont }};color:{{ onPrimCont }};"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 11L5 7l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Back to Memo</button>
+          <span style="background:{{ primCont }}; color:{{ onPrimCont }}; padding:4px 12px; border-radius:50px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;">Investor Room</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:500;">
+          <span style="color:{{ outline }};">Memo</span><span style="color:{{ outlineVar }};">→</span>
+          <span style="background:{{ primCont }}; color:{{ onPrimCont }}; padding:3px 10px; border-radius:50px;">Investor Room</span>
+          <span style="color:{{ outlineVar }};">→</span><span style="color:{{ outline }};">Final Pitch</span>
+        </div>
+        <div style="background:{{ surf }}; padding:5px 12px; border-radius:50px; font-size:11px; color:{{ onSurfVar }}; font-family:monospace; font-weight:600;">{{ sessionId }}</div>
+      </div>
+      <div style="flex:1; overflow:hidden; display:grid; grid-template-columns:380px 1fr;">
+        <!-- LEFT -->
+        <div style="border-right:1px solid {{ outlineVar }}; overflow-y:auto; padding:20px 18px; display:flex; flex-direction:column; gap:14px;">
+          <!-- Persona -->
+          <div style="background:{{ surf }}; border-radius:24px; padding:18px;">
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+              <div style="width:52px; height:52px; border-radius:50%; background:conic-gradient({{ primary }} 0deg, {{ primCont }} 180deg, {{ primary }} 360deg); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <div style="width:42px; height:42px; border-radius:50%; background:{{ surf }}; display:flex; align-items:center; justify-content:center;">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:18px; font-weight:700; color:{{ onSurf }};">M</span>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:15px; font-weight:700; color:{{ onSurf }}; margin-bottom:2px;">Mara</div>
+                <div style="font-size:12px; color:{{ onSurfVar }};">Skeptical Deep-Tech VC</div>
+              </div>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:6px;">
+              <span style="background:{{ primCont }}; color:{{ onPrimCont }}; padding:4px 12px; border-radius:8px; font-size:10px; font-weight:700;">ElevenLabs Voice</span>
+              <span style="background:{{ surfVar }}; color:{{ onSurfVar }}; padding:4px 12px; border-radius:8px; font-size:10px; font-weight:600;">Voice Generated</span>
+              <span style="background:{{ surfVar }}; color:{{ onSurfVar }}; padding:4px 12px; border-radius:8px; font-size:10px; font-weight:600;">Transcript Ready</span>
+            </div>
+          </div>
+          <!-- Q counter -->
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:0 4px;">
+            <span style="font-size:11px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em;">Question {{ questionNum }} / {{ totalQuestions }}</span>
+            <div style="display:flex; gap:4px;">
+              <sc-for list="{{ questionDots }}" as="dot" hint-placeholder-count="4">
+                <sc-if value="{{ dot.active }}" hint-placeholder-val="{{ false }}"><div style="width:20px; height:5px; border-radius:3px; background:{{ primary }};"></div></sc-if>
+                <sc-if value="{{ dot.done }}" hint-placeholder-val="{{ false }}"><div style="width:20px; height:5px; border-radius:3px; background:{{ primCont }};"></div></sc-if>
+                <sc-if value="{{ dot.pending }}" hint-placeholder-val="{{ true }}"><div style="width:20px; height:5px; border-radius:3px; background:{{ surfVar }};"></div></sc-if>
+              </sc-for>
+            </div>
+          </div>
+          <!-- Question card -->
+          <div style="background:{{ primCont }}; border-radius:24px; padding:18px 20px;">
+            <div style="font-size:10px; font-weight:700; color:{{ onPrimCont }}; opacity:.7; text-transform:uppercase; letter-spacing:.09em; margin-bottom:9px;">Mara asks</div>
+            <div style="font-size:14px; color:{{ onPrimCont }}; line-height:1.55; font-weight:500;">"{{ currentQ }}"</div>
+          </div>
+          <!-- Waveform -->
+          <div style="background:{{ surf }}; border-radius:20px; padding:16px 18px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+              <span style="font-size:12px; color:{{ onSurfVar }}; font-weight:600;">Voice Transmission</span>
+              <sc-if value="{{ voiceActive }}" hint-placeholder-val="{{ false }}">
+                <span style="background:{{ primCont }}; color:{{ onPrimCont }}; padding:3px 10px; border-radius:50px; font-size:10px; font-weight:700; animation:pulse 1s ease infinite;">● LIVE</span>
+              </sc-if>
+              <sc-if value="{{ voiceInactive }}" hint-placeholder-val="{{ true }}">
+                <span style="background:{{ surfVar }}; color:{{ outline }}; padding:3px 10px; border-radius:50px; font-size:10px; font-weight:600;">— STANDBY</span>
+              </sc-if>
+            </div>
+            <div style="display:flex; align-items:center; gap:2.5px; height:40px;">
+              <sc-if value="{{ voiceActive }}" hint-placeholder-val="{{ false }}">
+                <div style="width:3.5px; background:{{ primary }}; border-radius:2px; animation:b1 .85s ease-in-out infinite;"></div>
+                <div style="width:3.5px; background:{{ primary }}; border-radius:2px; animation:b2 .7s ease-in-out infinite .08s;"></div>
+                <div style="width:3.5px; background:{{ primary }}; border-radius:2px; animation:b3 .9s ease-in-out infinite .05s;"></div>
+                <div style="width:3.5px; background:{{ primary }}; border-radius:2px; animation:b4 .75s ease-in-out infinite .12s;"></div>
+                <div style="width:3.5px; background:{{ primary }}; border-radius:2px; animation:b5 .8s ease-in-out infinite .04s;"></div>
+                <div style="width:3.5px; background:{{ primary }}; border-radius:2px; animation:b6 .65s ease-in-out infinite .16s;"></div>
+                <div style="width:3.5px; background:{{ primary }}; border-radius:2px; animation:b7 .9s ease-in-out infinite .02s;"></div>
+                <div style="width:3.5px; background:{{ primary }}; border-radius:2px; animation:b8 .72s ease-in-out infinite .1s;"></div>
+                <div style="width:3.5px; background:{{ primary }}; border-radius:2px; animation:b9 .88s ease-in-out infinite .06s;"></div>
+                <div style="width:3.5px; background:{{ primary }}; border-radius:2px; animation:b10 .77s ease-in-out infinite .14s;"></div>
+                <div style="width:3.5px; background:{{ primary }}; border-radius:2px; animation:b11 .82s ease-in-out infinite .03s;"></div>
+                <div style="width:3.5px; background:{{ primary }}; border-radius:2px; animation:b12 .68s ease-in-out infinite .11s;"></div>
+                <div style="width:3.5px; background:{{ primary }}; border-radius:2px; animation:b1 .79s ease-in-out infinite .07s;"></div>
+                <div style="width:3.5px; background:{{ primary }}; border-radius:2px; animation:b3 .91s ease-in-out infinite .09s;"></div>
+              </sc-if>
+              <sc-if value="{{ voiceInactive }}" hint-placeholder-val="{{ true }}">
+                <div style="width:100%; height:2px; background:{{ outlineVar }}; border-radius:2px;"></div>
+              </sc-if>
+            </div>
+          </div>
+          <!-- Ask next button -->
+          <button onClick="{{ onAskNext }}" style="background:{{ surfVar }}; color:{{ onSurf }}; border:none; padding:13px; border-radius:50px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; width:100%; display:flex; align-items:center; justify-content:center; gap:8px; transition:transform .35s cubic-bezier(.34,1.56,.64,1),background .2s;" style-hover="transform:scale(1.04);background:{{ primCont }};color:{{ onPrimCont }};" style-active="transform:scale(.96)">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1L12 6.5 6.5 12M1 6.5h11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Ask next question
+          </button>
+        </div>
+
+        <!-- RIGHT -->
+        <div style="overflow-y:auto; padding:20px 24px; display:flex; flex-direction:column; gap:14px;">
+          <!-- Hint -->
+          <div style="background:{{ surf }}; border-radius:16px; padding:12px 16px; border-left:3px solid {{ primary }};">
+            <div style="font-size:10px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:5px;">Investor Hint</div>
+            <div style="font-size:12px; color:{{ onSurfVar }}; line-height:1.5;">{{ currentHint }}</div>
+          </div>
+          <!-- Answer -->
+          <div>
+            <div style="font-size:11px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:8px;">Your Answer</div>
+            <textarea value="{{ founderAnswer }}" onChange="{{ onAnswerChange }}" placeholder="Type your answer as the founder…" style="width:100%; min-height:110px; background:{{ surf }}; border:2px solid {{ outlineVar }}; border-radius:20px; padding:14px 16px; font-size:13px; color:{{ onSurf }}; line-height:1.6; font-family:'Inter',sans-serif; resize:vertical; outline:none; transition:border-color .2s;" style-focus="border-color:{{ primary }};"></textarea>
+            <button onClick="{{ onSubmitAnswer }}" style="margin-top:10px; background:{{ primary }}; color:{{ onPrimary }}; border:none; padding:14px; border-radius:50px; font-size:14px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; width:100%; box-shadow:0 4px 14px {{ primary }}44; transition:transform .35s cubic-bezier(.34,1.56,.64,1),box-shadow .2s;" style-hover="transform:scale(1.03);box-shadow:0 8px 22px {{ primary }}55;" style-active="transform:scale(.97)">Submit answer for evaluation →</button>
+          </div>
+          <!-- Evaluation -->
+          <sc-if value="{{ showEval }}" hint-placeholder-val="{{ false }}">
+            <div style="background:{{ surf }}; border-radius:24px; overflow:hidden; animation:springUp .5s cubic-bezier(.34,1.56,.64,1);">
+              <div style="background:{{ primCont }}; padding:16px 20px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:12px; font-weight:700; color:{{ onPrimCont }}; text-transform:uppercase; letter-spacing:.06em;">Pressure Test Complete</span>
+                <div style="display:flex; align-items:baseline; gap:3px;">
+                  <span style="font-family:'Space Grotesk',sans-serif; font-size:32px; font-weight:700; color:{{ onPrimCont }};">{{ evalScore }}</span>
+                  <span style="font-size:14px; color:{{ onPrimCont }}; opacity:.6;">/100</span>
+                </div>
+              </div>
+              <div style="padding:16px 20px; display:flex; flex-direction:column; gap:10px;">
+                <div style="background:{{ surfVar }}; border-radius:16px; padding:12px 14px;">
+                  <div style="font-size:10px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.07em; margin-bottom:5px;">✓ What Worked</div>
+                  <div style="font-size:12px; color:{{ onSurfVar }}; line-height:1.5;">{{ evalWorked }}</div>
+                </div>
+                <div style="background:{{ surfVar }}; border-radius:16px; padding:12px 14px;">
+                  <div style="font-size:10px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.07em; margin-bottom:5px;">⚠ What Was Weak</div>
+                  <div style="font-size:12px; color:{{ onSurfVar }}; line-height:1.5;">{{ evalWeak }}</div>
+                </div>
+                <div style="background:{{ errorSurf }}; border-radius:16px; padding:12px 14px;">
+                  <div style="font-size:10px; font-weight:700; color:{{ error }}; text-transform:uppercase; letter-spacing:.07em; margin-bottom:5px;">Missing Evidence</div>
+                  <div style="font-size:12px; color:{{ onSurfVar }}; line-height:1.5;">{{ evalMissing }}</div>
+                </div>
+                <div style="background:{{ primCont }}; border-radius:16px; padding:12px 14px;">
+                  <div style="font-size:10px; font-weight:700; color:{{ onPrimCont }}; opacity:.7; text-transform:uppercase; letter-spacing:.07em; margin-bottom:5px;">Improved Answer</div>
+                  <div style="font-size:12px; color:{{ onPrimCont }}; line-height:1.6; font-style:italic;">"{{ evalImproved }}"</div>
+                </div>
+                <div style="background:{{ surfVar }}; border-radius:16px; padding:10px 14px; display:flex; align-items:flex-start; gap:8px;">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;margin-top:1px;"><path d="M7 1v8M4 7l3 2 3-2" stroke="{{ primary }}" stroke-width="1.4" stroke-linecap="round"/><path d="M1.5 12h11" stroke="{{ primary }}" stroke-width="1.4" stroke-linecap="round"/></svg>
+                  <span style="font-size:12px; color:{{ onSurfVar }}; line-height:1.45;">{{ evalAngle }}</span>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+          <!-- Final CTA -->
+          <sc-if value="{{ showFinalCta }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ goFinal }}" style="background:{{ primary }}; color:{{ onPrimary }}; border:none; padding:16px; border-radius:50px; font-size:15px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif; width:100%; box-shadow:0 6px 20px {{ primary }}44; animation:springUp .5s cubic-bezier(.34,1.56,.64,1); transition:transform .35s cubic-bezier(.34,1.56,.64,1);" style-hover="transform:scale(1.04) translateY(-2px);" style-active="transform:scale(.97)">Generate Final Pitch → View Export</button>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ═══════════════════════════════════════════
+       SCREEN 6 — FINAL
+  ══════════════════════════════════════════════ -->
+  <sc-if value="{{ isFinal }}" hint-placeholder-val="{{ false }}">
+    <div style="height:100vh; display:flex; flex-direction:column;">
+      <div style="flex-shrink:0; height:56px; padding:0 28px; border-bottom:1px solid {{ outlineVar }}; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button onClick="{{ goInvestorRoom }}" style="background:{{ surfVar }}; border:none; cursor:pointer; color:{{ onSurfVar }}; display:flex; align-items:center; gap:6px; font-size:12px; padding:7px 14px 7px 10px; border-radius:50px; font-family:'Inter',sans-serif; font-weight:500; transition:transform .3s cubic-bezier(.34,1.56,.64,1),background .2s;" style-hover="transform:scale(1.04);background:{{ primCont }};color:{{ onPrimCont }};"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 11L5 7l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Back</button>
+          <span style="background:{{ primCont }}; color:{{ onPrimCont }}; padding:4px 12px; border-radius:50px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;">Final Pitch</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:500;">
+          <span style="color:{{ outline }};">Memo</span><span style="color:{{ outlineVar }};">→</span>
+          <span style="color:{{ outline }};">Investor Room</span><span style="color:{{ outlineVar }};">→</span>
+          <span style="background:{{ primCont }}; color:{{ onPrimCont }}; padding:3px 10px; border-radius:50px;">Final Pitch</span>
+        </div>
+        <div style="background:{{ surf }}; padding:5px 12px; border-radius:50px; font-size:11px; color:{{ onSurfVar }}; font-family:monospace; font-weight:600;">{{ sessionId }}</div>
+      </div>
+      <div style="flex:1; overflow-y:auto; padding:24px 32px; max-width:1100px; margin:0 auto; width:100%;">
+        <div style="display:flex; align-items:center; gap:14px; margin-bottom:20px;">
+          <h2 style="font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:700; margin:0; letter-spacing:-.025em;">Pitch Improvement Report</h2>
+          <span style="background:{{ primCont }}; color:{{ onPrimCont }}; padding:5px 14px; border-radius:50px; font-size:12px; font-weight:600;">Investor test complete</span>
+        </div>
+        <!-- Pitch comparison -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+          <div style="background:{{ surf }}; border-radius:24px; padding:20px 22px;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+              <span style="font-size:10px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em;">Original Pitch</span>
+              <span style="background:{{ surfVar }}; color:{{ onSurfVar }}; padding:3px 10px; border-radius:8px; font-size:10px; font-weight:600;">Before</span>
+            </div>
+            <div style="font-size:13px; color:{{ onSurfVar }}; line-height:1.7; font-style:italic;">"{{ originalPitch }}"</div>
+          </div>
+          <div style="background:{{ primCont }}; border-radius:24px; padding:20px 22px;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+              <span style="font-size:10px; font-weight:700; color:{{ onPrimCont }}; text-transform:uppercase; letter-spacing:.09em; opacity:.7;">Improved Pitch</span>
+              <span style="background:{{ primary }}; color:{{ onPrimary }}; padding:3px 10px; border-radius:8px; font-size:10px; font-weight:600;">After Coaching</span>
+            </div>
+            <div style="font-size:13px; color:{{ onPrimCont }}; line-height:1.7; font-style:italic;">"{{ improvedPitch }}"</div>
+          </div>
+        </div>
+        <!-- Objections + Experiments -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+          <div style="background:{{ surf }}; border-radius:24px; padding:20px 22px;">
+            <div style="font-size:10px; font-weight:700; color:{{ error }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:14px;">Top Objections</div>
+            <sc-for list="{{ objections }}" as="obj" hint-placeholder-count="4">
+              <div style="display:flex; gap:10px; margin-bottom:10px; align-items:flex-start;">
+                <span style="flex-shrink:0; width:20px; height:20px; border-radius:8px; background:{{ errorSurf }}; color:{{ error }}; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; margin-top:1px;">{{ obj.num }}</span>
+                <span style="font-size:12px; color:{{ onSurfVar }}; line-height:1.5;">{{ obj.text }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background:{{ surf }}; border-radius:24px; padding:20px 22px;">
+            <div style="font-size:10px; font-weight:700; color:{{ primary }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:14px;">Next Experiments</div>
+            <sc-for list="{{ experiments }}" as="exp" hint-placeholder-count="4">
+              <div style="display:flex; gap:10px; margin-bottom:10px; align-items:flex-start;">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;margin-top:2px;"><path d="M2 7l3.5 3.5 6.5-7" stroke="{{ primary }}" stroke-width="1.6" stroke-linecap="round"/></svg>
+                <span style="font-size:12px; color:{{ onSurfVar }}; line-height:1.5;">{{ exp.text }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <!-- Export -->
+        <div style="background:{{ surf }}; border-radius:24px; padding:20px 22px;">
+          <div style="font-size:10px; font-weight:700; color:{{ onSurfVar }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:16px;">Export</div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+            <button onClick="{{ onCopyMemo }}" style="background:{{ primCont }}; color:{{ onPrimCont }}; border:none; padding:11px 20px; border-radius:50px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; display:flex; align-items:center; gap:7px; transition:transform .35s cubic-bezier(.34,1.56,.64,1);" style-hover="transform:scale(1.05)" style-active="transform:scale(.96)">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="4" y="4" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M8 4V2.5A.5.5 0 007.5 2H1.5A.5.5 0 001 2.5v6a.5.5 0 00.5.5H3" stroke="currentColor" stroke-width="1.2"/></svg>
+              Copy memo
+            </button>
+            <button onClick="{{ onDownloadMd }}" style="background:{{ primCont }}; color:{{ onPrimCont }}; border:none; padding:11px 20px; border-radius:50px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; display:flex; align-items:center; gap:7px; transition:transform .35s cubic-bezier(.34,1.56,.64,1);" style-hover="transform:scale(1.05)" style-active="transform:scale(.96)">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1.5v8M4 7l2.5 2.5L9 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 11.5h11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+              Download MD
+            </button>
+            <button onClick="{{ onDownloadJson }}" style="background:{{ primCont }}; color:{{ onPrimCont }}; border:none; padding:11px 20px; border-radius:50px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; display:flex; align-items:center; gap:7px; transition:transform .35s cubic-bezier(.34,1.56,.64,1);" style-hover="transform:scale(1.05)" style-active="transform:scale(.96)">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x=".75" y=".75" width="11.5" height="11.5" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 5l2 2-2 2M7 9h2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+              Download JSON
+            </button>
+            <button onClick="{{ onSaveReport }}" style="background:{{ primary }}; color:{{ onPrimary }}; border:none; padding:11px 20px; border-radius:50px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; display:flex; align-items:center; gap:7px; box-shadow:0 4px 14px {{ primary }}44; transition:transform .35s cubic-bezier(.34,1.56,.64,1);" style-hover="transform:scale(1.05)" style-active="transform:scale(.96)">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 10v2h10v-2M6.5 1.5v8M4 7l2.5 2.5L9 7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Save investor report
+            </button>
+          </div>
+          <!-- API reference -->
+          <div style="background:{{ surfVar }}; border-radius:16px; padding:12px 16px;">
+            <div style="font-size:10px; font-weight:700; color:{{ outline }}; text-transform:uppercase; letter-spacing:.09em; margin-bottom:8px;">Future API Endpoints (backend not implemented)</div>
+            <div style="display:flex; flex-wrap:wrap; gap:6px;">
+              <code style="background:{{ bg }}; color:{{ onSurfVar }}; padding:3px 9px; border-radius:8px; font-size:11px; font-family:monospace;">POST /documents/analyze</code>
+              <code style="background:{{ bg }}; color:{{ onSurfVar }}; padding:3px 9px; border-radius:8px; font-size:11px; font-family:monospace;">POST /demo/analyze</code>
+              <code style="background:{{ bg }}; color:{{ onSurfVar }}; padding:3px 9px; border-radius:8px; font-size:11px; font-family:monospace;">POST /investor/question</code>
+              <code style="background:{{ bg }}; color:{{ onSurfVar }}; padding:3px 9px; border-radius:8px; font-size:11px; font-family:monospace;">POST /investor/answer</code>
+              <code style="background:{{ bg }}; color:{{ onSurfVar }}; padding:3px 9px; border-radius:8px; font-size:11px; font-family:monospace;">GET /sessions/:id</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;palette&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;viola&quot;,&quot;verde&quot;,&quot;rosso&quot;,&quot;blu&quot;,&quot;arancio&quot;,&quot;cielo&quot;],&quot;default&quot;:&quot;rosso&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;contrast&quot;:{&quot;editor&quot;:&quot;float&quot;,&quot;min&quot;:0,&quot;max&quot;:1,&quot;step&quot;:0.5,&quot;default&quot;:1,&quot;tsType&quot;:&quot;number&quot;},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+
+// ── PALETTES (Material 3 Expressive) ─────────────────
+const PALETTES = {
+  viola: {
+    dark:  { bg:'#141218', surf:'#1D1B20', surfVar:'#2B2930', primary:'#D0BCFF', onPrimary:'#381E72', primCont:'#4F378B', onPrimCont:'#EADDFF', onSurf:'#E6E0E9', onSurfVar:'#CAC4D0', outline:'#938F99', outlineVar:'#49454F', error:'#FFB4AB', errorSurf:'rgba(147,0,10,.18)' },
+    light: { bg:'#FFFBFE', surf:'#F7F2FA', surfVar:'#E7E0EC', primary:'#6750A4', onPrimary:'#FFFFFF', primCont:'#EADDFF', onPrimCont:'#21005D', onSurf:'#1C1B1F', onSurfVar:'#49454F', outline:'#79747E', outlineVar:'#CAC4D0', error:'#B3261E', errorSurf:'rgba(179,38,30,.1)' },
+  },
+  verde: {
+    dark:  { bg:'#111411', surf:'#191D18', surfVar:'#1F2620', primary:'#6DD58C', onPrimary:'#003918', primCont:'#005227', onPrimCont:'#89F4A7', onSurf:'#E2E3DD', onSurfVar:'#BFC9BF', outline:'#899E8A', outlineVar:'#3F4940', error:'#FFB4AB', errorSurf:'rgba(147,0,10,.18)' },
+    light: { bg:'#F7FBF4', surf:'#EFF4ED', surfVar:'#DCE5DB', primary:'#006E2C', onPrimary:'#FFFFFF', primCont:'#89F4A7', onPrimCont:'#002109', onSurf:'#191D18', onSurfVar:'#404942', outline:'#70796F', outlineVar:'#BFC9BF', error:'#B3261E', errorSurf:'rgba(179,38,30,.1)' },
+  },
+  rosso: {
+    dark:  { bg:'#141210', surf:'#1D1A18', surfVar:'#2C1A18', primary:'#FFB4AB', onPrimary:'#690005', primCont:'#93000A', onPrimCont:'#FFDAD6', onSurf:'#EDE0DE', onSurfVar:'#D8C2BE', outline:'#A08C8A', outlineVar:'#534341', error:'#FFB4AB', errorSurf:'rgba(147,0,10,.2)' },
+    light: { bg:'#FFF8F7', surf:'#FFF0ED', surfVar:'#F5DDDA', primary:'#B3261E', onPrimary:'#FFFFFF', primCont:'#FFDAD6', onPrimCont:'#410E0B', onSurf:'#221918', onSurfVar:'#534341', outline:'#857370', outlineVar:'#D8C2BE', error:'#B3261E', errorSurf:'rgba(179,38,30,.1)' },
+  },
+  blu: {
+    dark:  { bg:'#111318', surf:'#191C22', surfVar:'#1E2028', primary:'#A8C7FA', onPrimary:'#062E6F', primCont:'#26447A', onPrimCont:'#D6E3FF', onSurf:'#E2E2EF', onSurfVar:'#C4C6D0', outline:'#8E9099', outlineVar:'#44474E', error:'#FFB4AB', errorSurf:'rgba(147,0,10,.18)' },
+    light: { bg:'#F9F9FF', surf:'#EFF0FF', surfVar:'#E0E2EF', primary:'#0057A8', onPrimary:'#FFFFFF', primCont:'#D6E3FF', onPrimCont:'#001B3F', onSurf:'#1A1C23', onSurfVar:'#44474E', outline:'#74777F', outlineVar:'#C4C6D0', error:'#B3261E', errorSurf:'rgba(179,38,30,.1)' },
+  },
+  arancio: {
+    dark:  { bg:'#201A14', surf:'#281E16', surfVar:'#2A2018', primary:'#FFB77C', onPrimary:'#4A2800', primCont:'#6A3C00', onPrimCont:'#FFDCBC', onSurf:'#EDE0DA', onSurfVar:'#D7C2B7', outline:'#A08D83', outlineVar:'#52443C', error:'#FFB4AB', errorSurf:'rgba(147,0,10,.18)' },
+    light: { bg:'#FFF8F5', surf:'#FFF0E7', surfVar:'#F3DED4', primary:'#8B4000', onPrimary:'#FFFFFF', primCont:'#FFDCBC', onPrimCont:'#2E1300', onSurf:'#211A14', onSurfVar:'#52443C', outline:'#84726A', outlineVar:'#D7C2B7', error:'#B3261E', errorSurf:'rgba(179,38,30,.1)' },
+  },
+  cielo: {
+    dark:  { bg:'#101418', surf:'#181C22', surfVar:'#1A2228', primary:'#77D7F0', onPrimary:'#003641', primCont:'#004E5B', onPrimCont:'#B9EAFF', onSurf:'#E2E2E6', onSurfVar:'#BFC8CF', outline:'#889198', outlineVar:'#3E474E', error:'#FFB4AB', errorSurf:'rgba(147,0,10,.18)' },
+    light: { bg:'#F5FAFE', surf:'#E8F4FA', surfVar:'#DCE5EA', primary:'#006782', onPrimary:'#FFFFFF', primCont:'#B9EAFF', onPrimCont:'#001F28', onSurf:'#171C1F', onSurfVar:'#3E474E', outline:'#6E7880', outlineVar:'#BEC8CF', error:'#B3261E', errorSurf:'rgba(179,38,30,.1)' },
+  },
+};
+
+// ── MOCK DATA ─────────────────────────────────────────
+const PAPER = { title:'Low-latency Edge Inference for Industrial Sensor Anomaly Detection', authors:'Dr. Sarah Chen, Prof. Marcus Webb, Aiko Yamamoto', institution:'MIT CSAIL', year:2024, field:'Edge Computing / Industrial AI', pages:24, size:'2.4 MB', confidence:87, snippets:14, sessionId:'SE-2024-A71C' };
+const AGENTS_DATA = [
+  { id:0, name:'Paper Intake Agent', description:'Parsing document structure, extracting abstract, methodology and results sections', output:'24-page paper parsed. Identified abstract, 5 methodology sections, results tables. Primary claims: 94% accuracy, <4ms inference latency extracted.' },
+  { id:1, name:'Technical Novelty Agent', description:'Analyzing claims against patent databases and recent academic publications', output:'Key innovation: LSTM-autoencoder hybrid with online adaptation. No direct prior art for sub-10ms edge deployment. IP potential: training pipeline, edge optimization.' },
+  { id:2, name:'Market Wedge Agent', description:'Identifying initial customer segment and beachhead market opportunity', output:'Beachhead: Automotive Tier 2/3 suppliers. Market: $4.2B predictive maintenance. Early adopters: facilities with OEM SLA downtime penalties.' },
+  { id:3, name:'Competitor & Risk Agent', description:'Mapping competitive landscape and surfacing key execution risks', output:'Key competitors: Siemens MindSphere (cloud-latency issue), Uptake (no hardware), 5 VC-backed startups. Moat risk: medium. Differentiation: latency + hardware bundle.' },
+  { id:4, name:'Synthesis Critic Agent', description:'Stress-testing memo coherence and flagging missing evidence', output:'Memo coherence: Strong. Critical gaps: willingness-to-pay data, deployment case study. Investor readiness: 73/100. 4 investor questions flagged.' },
+];
+const PIPELINE_STEPS_DATA = ['Ingesting document','Extracting technical novelty','Mapping market wedge','Checking competitors','Identifying investor risks','Building venture memo','Preparing investor room'];
+const INVESTOR_QS_DATA = [
+  { q:'Your technology is interesting, but why is this a company and not just a research project?', hint:'Focus on commercial validation, customer urgency, and what changes when you add go-to-market execution.' },
+  { q:'Edge AI for predictive maintenance is crowded — Siemens, Honeywell, and a dozen VC-backed startups are doing this. What\'s your genuinely defensible wedge that lasts 18 months?', hint:'Be specific about your technical advantage and why incumbents can\'t replicate it without rebuilding their cloud architecture.' },
+  { q:'How long does it actually take to integrate into a factory floor? What\'s the real sales cycle — and who signs the check?', hint:'Specifics needed: IT buyer vs. operations buyer, evaluation period, procurement friction, competitive displacement cost.' },
+  { q:'What\'s your evidence that factories will pay $24K per line per year? Have you tested any pricing at all?', hint:'Show willingness-to-pay data — even informal. Benchmark against reactive maintenance or downtime insurance spend.' },
+];
+const EVAL_DATA = [
+  { score:72, worked:'Clear customer direction (mid-market manufacturers), specific pain point (downtime costs), differentiation from cloud alternatives.', weak:'No willingness-to-pay evidence. Deployment advantage unquantified. Go-to-market timeline vague.', missing:'Customer LOIs, pilot deployment data, competitive pricing benchmarks.', improved:'We target predictive maintenance leads at mid-sized automotive suppliers facing OEM penalties of $50K–$200K per incident. Our <4ms edge inference is 50x faster than cloud — this matters for safety shutoffs. We have 2 LOI conversations active and one pilot in legal review.', angle:'Lead with the OEM penalty number. Quantify downtime cost with real customer data.' },
+  { score:65, worked:'Acknowledged the competitive landscape. Named specific incumbents and articulated the differentiation angle.', weak:'The 18-month moat logic was unclear. Latency advantage not connected to a safety or business outcome.', missing:'IP filing status, exclusive data partnerships, customer switching-cost analysis.', improved:'The latency gap — 4ms vs. 400ms — is not just a spec. At 4ms you can trigger a mechanical shutoff. At 400ms, the blade has already broken. That\'s a safety-certification wedge Siemens cannot retrofit without rebuilding their cloud architecture.', angle:'The safety certification angle creates a regulatory moat that incumbents can\'t replicate quickly.' },
+  { score:58, worked:'Some acknowledgment of procurement complexity. Recognized this as an enterprise sales question.', weak:'No clear answer on who signs the check. Generic response avoided the specifics investors need.', missing:'Decision-maker mapping, IT vs. operations budget, evaluation timeline, displacement costs.', improved:'Our buyer is VP Operations, not IT. Trigger event: OEM scorecard review where downtime penalties threaten contract renewal. Evaluation: 30-day proof-of-concept + legal + procurement = 6–8 weeks. We displace $180K/year reactive maintenance contracts. Our $24K is a 7:1 ROI story.', angle:'Reframe: you\'re selling downtime insurance with a 7:1 ROI.' },
+  { score:61, worked:'Referenced the $24K price point directly. Some quantification attempted.', weak:'No actual pricing validation presented. Relied on market-size claims rather than customer conversations.', missing:'Willingness-to-pay interviews, price comparison against reactive maintenance, benchmarks.', improved:'We ran 12 discovery calls with maintenance leads at mid-market automotive plants. Consistent finding: reactive maintenance averages $180K–$240K annually per line. Our $24K is a rounding error. Three prospects said they\'d pay up to $40K.', angle:'Present $24K as a 7:1 ROI versus reactive maintenance — not a cost.' },
+];
+const CLAIMS_DATA = [
+  { text:'<4ms edge inference latency', conf:94 },
+  { text:'94% anomaly detection accuracy', conf:87 },
+  { text:'$50B+ annual industrial downtime losses', conf:82 },
+  { text:'$4.2B predictive maintenance TAM', conf:71 },
+  { text:'10M+ machine-hours training dataset', conf:66 },
+];
+const RISKS_DATA = [
+  { level:'high', levelLabel:'High', text:'Market adoption speed: conservative manufacturing IT buyers with 12–18 month sales cycles' },
+  { level:'medium', levelLabel:'Medium', text:'Hardware supply chain: dependency on NVIDIA Jetson component availability' },
+  { level:'medium', levelLabel:'Medium', text:'Legacy integration complexity: SCADA/PLC systems require custom connectors' },
+  { level:'low', levelLabel:'Low', text:'IP transfer timeline: academic-to-commercial patent assignment takes 3–6 months' },
+];
+const MILESTONES_DATA = [
+  { period:'30 days', goal:'Sign LOIs with 2 automotive suppliers. Complete hardware BOM. Identify CTO candidate.' },
+  { period:'60 days', goal:'Deploy pilot at Tier 1 facility. Capture first live anomaly data. NDA-protected case study.' },
+  { period:'90 days', goal:'Series A data room complete. 3 customer references. $2M ARR path validated.' },
+];
+const TOP_QS_DATA = ['Why is this a company not a research project?','How defensible is your edge vs. Siemens in 18 months?','Who signs the check — and what\'s the real sales cycle?','Where is your willingness-to-pay data at $24K/year?','What happens if NVIDIA changes Jetson pricing?'];
+const PITCH_DATA = {
+  original:'EdgePulse uses novel edge AI to predict machine failures in real-time. Our MIT-derived LSTM architecture runs at under 4ms on edge hardware, making it 50x faster than cloud monitoring solutions. We\'re targeting mid-market manufacturers who lose millions annually to unplanned downtime.',
+  improved:'EdgePulse eliminates unplanned downtime for mid-sized automotive suppliers facing OEM production penalties. Our plug-and-play edge appliance deploys in 8 weeks — versus 6+ months for legacy integrations — and runs AI inference at 4ms locally, where cloud latency makes safety shutoffs physically impossible. We\'ve mapped a $4.2B wedge in automotive Tier 2/3, have 2 active LOIs, and price at a 7:1 ROI vs. reactive maintenance costs. Series A target: 10 deployed facilities, $280K ARR, by month 12.',
+  objections:['No signed LOIs or proof of willingness to pay at the $24K price point','Edge AI incumbents have existing factory relationships and distribution channels','Manufacturing sales cycles run 12–18 months — raises capital efficiency questions','Single technical founder with no prior manufacturing go-to-market experience'],
+  experiments:['Run 20 discovery calls with VP Operations at Tier 2 automotive suppliers to validate OEM penalty claims','Test price sensitivity: offer 90-day pilot at $8K to capture first paying customer reference','File provisional patent on edge training pipeline before publishing the research','Hire one person with Siemens or Rockwell Automation background as first commercial hire'],
+};
+
+// ── COMPONENT ─────────────────────────────────────────
+class Component extends DCLogic {
+  analysisTimer = null;
+
+  state = {
+    screen: 'landing',
+    hasFile: false,
+    uploadFileName: null,
+    analysisProgress: 0,
+    agentStatuses: ['queued','queued','queued','queued','queued'],
+    qIdx: 0,
+    founderAnswer: '',
+    showEval: false,
+    evalHistory: [],
+    toasts: [],
+    voiceActive: false,
+  };
+
+  componentWillUnmount() {
+    if (this.analysisTimer) clearInterval(this.analysisTimer);
+  }
+
+  getColors() {
+    const palKey = this.props.palette || 'viola';
+    const themeKey = this.props.theme || 'dark';
+    const contrast = parseFloat(this.props.contrast) || 0;
+    const pal = PALETTES[palKey] || PALETTES.viola;
+    const c = { ...(pal[themeKey] || pal.dark) };
+    const isDark = themeKey === 'dark';
+    if (contrast >= 1) {
+      c.onSurf = isDark ? '#FFFFFF' : '#000000';
+      c.onSurfVar = isDark ? '#F0EEF3' : '#141414';
+      c.outline = isDark ? '#C0BCC6' : '#3C3A40';
+    } else if (contrast >= 0.5) {
+      c.onSurf = isDark ? '#F5F0F8' : '#0D0C10';
+      c.onSurfVar = isDark ? '#D8D2DE' : '#2A2830';
+    }
+    return c;
+  }
+
+  toast(msg) {
+    const id = Date.now() + Math.random();
+    this.setState(s => ({ toasts: [...s.toasts, { id, msg }] }));
+    setTimeout(() => this.setState(s => ({ toasts: s.toasts.filter(t => t.id !== id) })), 3200);
+  }
+
+  startAnalysis() {
+    if (this.analysisTimer) clearInterval(this.analysisTimer);
+    this.setState({ screen:'analysis', analysisProgress:0, agentStatuses:['queued','queued','queued','queued','queued'] });
+    const steps = [
+      [1,['running','queued','queued','queued','queued']],
+      [2,['complete','running','queued','queued','queued']],
+      [3,['complete','complete','running','queued','queued']],
+      [4,['complete','complete','complete','running','queued']],
+      [5,['complete','complete','complete','complete','running']],
+      [6,['complete','complete','complete','complete','running']],
+      [7,['complete','complete','complete','complete','complete']],
+    ];
+    let i = 0;
+    this.analysisTimer = setInterval(() => {
+      if (i < steps.length) {
+        const [p, statuses] = steps[i];
+        if (p === 7) { this.setState({ analysisProgress:p, agentStatuses:statuses, screen:'dashboard' }); clearInterval(this.analysisTimer); }
+        else { this.setState({ analysisProgress:p, agentStatuses:statuses }); }
+        i++;
+      } else { clearInterval(this.analysisTimer); }
+    }, 1300);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const c = this.getColors();
+    const { agentStatuses, analysisProgress, qIdx } = s;
+
+    const isLanding = s.screen === 'landing';
+    const isUpload = s.screen === 'upload';
+    const isAnalysis = s.screen === 'analysis';
+    const isDashboard = s.screen === 'dashboard';
+    const isInvestorRoom = s.screen === 'investor';
+    const isFinal = s.screen === 'final';
+
+    const analysisPercent = Math.round((analysisProgress / 7) * 100) + '%';
+    const pipelineSteps = PIPELINE_STEPS_DATA.map((name, i) => ({ name, isComplete: i < analysisProgress, isActive: i === analysisProgress, isPending: i > analysisProgress }));
+    const agentCards = AGENTS_DATA.map((agent, i) => { const status = agentStatuses[i]; return { ...agent, isComplete: status==='complete', isRunning: status==='running', isQueued: status==='queued' }; });
+
+    const qIdxClamped = qIdx % INVESTOR_QS_DATA.length;
+    const currentQData = INVESTOR_QS_DATA[qIdxClamped];
+    const currentEvalData = s.showEval ? EVAL_DATA[qIdxClamped] : null;
+    const questionDots = INVESTOR_QS_DATA.map((_, i) => ({ active: i === qIdxClamped, done: i < qIdxClamped, pending: i > qIdxClamped }));
+
+    const risks = RISKS_DATA.map(r => ({
+      ...r,
+      color: r.level==='high' ? '#EF4444' : r.level==='medium' ? '#F59E0B' : '#22C55E',
+      bg: r.level==='high' ? 'rgba(239,68,68,.15)' : r.level==='medium' ? 'rgba(245,158,11,.15)' : 'rgba(34,197,94,.15)',
+    }));
+    const claims = CLAIMS_DATA.map(cl => ({
+      text: cl.text,
+      confLabel: cl.conf + '%',
+      barWidth: cl.conf + '%',
+      color: cl.conf >= 80 ? '#22C55E' : cl.conf >= 70 ? c.primary : '#F59E0B',
+    }));
+
+    return {
+      // Colors (live runtime — change with palette/contrast/theme tweaks)
+      bg: c.bg, surf: c.surf, surfVar: c.surfVar,
+      primary: c.primary, onPrimary: c.onPrimary,
+      primCont: c.primCont, onPrimCont: c.onPrimCont,
+      onSurf: c.onSurf, onSurfVar: c.onSurfVar,
+      outline: c.outline, outlineVar: c.outlineVar,
+      error: c.error, errorSurf: c.errorSurf,
+
+      // Screens
+      isLanding, isUpload, isAnalysis, isDashboard, isInvestorRoom, isFinal,
+      sessionId: PAPER.sessionId,
+
+      // Navigation
+      goHome: () => this.setState({ screen:'landing' }),
+      goUpload: () => this.setState({ screen:'upload' }),
+      startDemo: () => this.startAnalysis(),
+      goInvestorRoom: () => this.setState({ screen:'investor', qIdx:0, showEval:false, founderAnswer:'', evalHistory:[] }),
+      goFinal: () => this.setState({ screen:'final' }),
+      goDashboard: () => this.setState({ screen:'dashboard' }),
+
+      // Upload
+      hasFile: s.hasFile, noFile: !s.hasFile, uploadFileName: s.uploadFileName || '',
+      handleDragOver: (e) => { e.preventDefault(); },
+      handleDragLeave: () => {},
+      handleDrop: (e) => { e.preventDefault(); const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) this.setState({ hasFile:true, uploadFileName:f.name }); },
+
+      // Analysis
+      analysisStep: String(analysisProgress), analysisPercent, pipelineSteps, agentCards,
+
+      // Dashboard
+      paperTitle: PAPER.title, paperAuthors: PAPER.authors, paperInstitution: PAPER.institution,
+      paperYear: String(PAPER.year), paperPages: String(PAPER.pages), paperSize: PAPER.size,
+      paperConfidence: String(PAPER.confidence), paperSnippets: String(PAPER.snippets), confBarWidth: PAPER.confidence + '%',
+      companyIdea: 'EdgePulse — An edge AI monitoring platform that predicts machine failures before downtime occurs, built for mid-market manufacturers.',
+      problemText: 'Industrial facilities lose $50B+ annually to unplanned downtime. Existing monitoring requires cloud connectivity with 200–500ms latency — too slow for safety-critical anomaly detection.',
+      customerText: 'Predictive maintenance leads at mid-sized automotive parts suppliers facing OEM delay penalties of $50K–$200K per incident.',
+      wedgeText: 'Automotive Tier 2/3 suppliers in the US Midwest — highest downtime cost density, OEM pressure, and lowest current AI adoption rate.',
+      whyNowText: 'Edge AI chips (NVIDIA Jetson Orin) now cost <$500. 5G enables real-time edge-to-cloud sync. Post-pandemic supply chain fragility elevated downtime prevention to a boardroom priority.',
+      productText: 'EdgePulse Sentinel: on-premise edge appliance with pre-trained anomaly models, plug-and-play with Siemens/Fanuc machinery. Deploys in 8 weeks vs. 6+ months for competitors.',
+      moatText: 'LSTM-autoencoder hybrid trained on 10M+ machine-hours. <4ms inference (50x faster than cloud). Each deployment generates proprietary training data. Edge optimization pipeline patent pending.',
+      modelText: '$24,000/year per facility (hardware + software license). $4,000/year maintenance. Pilot-to-production in 8 weeks. Year 1: 10 facilities = $280K ARR.',
+      milestones: MILESTONES_DATA,
+      risks,
+      claims,
+      topQuestions: TOP_QS_DATA.map((q, i) => ({ q, num: i + 1 })),
+      missing: ['Signed customer LOIs','Willingness-to-pay validation data','Competitive pricing benchmarks','Deployment timeline validation in live factory'].map(text => ({ text })),
+
+      // Investor Room
+      currentQ: currentQData.q, currentHint: currentQData.hint,
+      questionNum: String(qIdxClamped + 1), totalQuestions: String(INVESTOR_QS_DATA.length),
+      questionDots, founderAnswer: s.founderAnswer,
+      onAnswerChange: (e) => this.setState({ founderAnswer: e.target.value }),
+      showEval: s.showEval,
+      evalScore: currentEvalData ? String(currentEvalData.score) : '',
+      evalWorked: currentEvalData ? currentEvalData.worked : '',
+      evalWeak: currentEvalData ? currentEvalData.weak : '',
+      evalMissing: currentEvalData ? currentEvalData.missing : '',
+      evalImproved: currentEvalData ? currentEvalData.improved : '',
+      evalAngle: currentEvalData ? currentEvalData.angle : '',
+      showFinalCta: s.evalHistory.length >= 2,
+      voiceActive: s.voiceActive, voiceInactive: !s.voiceActive,
+      onAskNext: () => { const next = (qIdx + 1) % INVESTOR_QS_DATA.length; this.setState({ qIdx:next, showEval:false, founderAnswer:'', voiceActive:true }); setTimeout(() => this.setState({ voiceActive:false }), 5000); },
+      onSubmitAnswer: () => { if (!s.founderAnswer.trim()) return; const ev = EVAL_DATA[qIdxClamped]; this.setState(prev => ({ showEval:true, evalHistory:[...prev.evalHistory, { q:currentQData.q, a:s.founderAnswer, score:ev.score }] })); },
+
+      // Final
+      originalPitch: PITCH_DATA.original, improvedPitch: PITCH_DATA.improved,
+      objections: PITCH_DATA.objections.map((text, i) => ({ text, num: i+1 })),
+      experiments: PITCH_DATA.experiments.map((text, i) => ({ text, num: i+1 })),
+      evalHistoryCount: String(s.evalHistory.length || 4),
+      onCopyMemo: () => this.toast('✓ Venture memo copied'),
+      onDownloadMd: () => this.toast('✓ Markdown downloaded'),
+      onDownloadJson: () => this.toast('✓ JSON exported'),
+      onSaveReport: () => this.toast('✓ Investor report saved'),
+
+      toasts: s.toasts,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from src.config import Settings
 from src.schemas import AgentResult, AgentTrace, DocumentAnalyzeResponse, EvidenceItem, VentureMemo
 from src.services.demo_data import build_demo_response
+from src.services.gemini_service import GeminiProviderError, GeminiService
 from src.services.openai_service import AIProviderError, OpenAIService
 
 
@@ -61,7 +62,7 @@ def analyze_document(
             settings=settings,
         )
 
-    return DocumentAnalyzeResponse(
+    response = DocumentAnalyzeResponse(
         sessionId=session_id,
         memo=synthesis.data["memo"],
         evidence=evidence,
@@ -73,6 +74,8 @@ def analyze_document(
             synthesis.trace,
         ],
     )
+    _apply_gemini_review(response=response, settings=settings)
+    return response
 
 
 def paper_intake_agent(*, openai: OpenAIService, evidence: list[EvidenceItem]) -> AgentResult:
@@ -214,6 +217,34 @@ def build_evidence(document_text: str) -> list[EvidenceItem]:
     return evidence[:8]
 
 
+def _apply_gemini_review(*, response: DocumentAnalyzeResponse, settings: Settings) -> None:
+    gemini = GeminiService(settings)
+    if not gemini.is_configured():
+        return
+
+    start = time.perf_counter()
+    try:
+        review = gemini.review_memo(memo=response.memo, evidence=response.evidence)
+        flags = _as_string_list(review.get("hallucinationFlags"))
+        missing = _as_string_list(review.get("missingEvidence"))
+        response.memo.missingEvidence = _dedupe(response.memo.missingEvidence + flags + missing)
+        summary = str(review.get("review") or "Reviewed memo for weak claims and missing proof.")
+        status = "ok"
+    except GeminiProviderError as exc:
+        summary = f"{exc}; continuing with OpenAI memo."
+        status = "fallback"
+
+    response.agentTraces.append(
+        AgentTrace(
+            agent="Gemini Reviewer",
+            status=status,
+            summary=_trim_excerpt(summary, 260),
+            model=settings.GEMINI_MODEL,
+            latencyMs=int((time.perf_counter() - start) * 1000),
+        )
+    )
+
+
 def _run_specialist_agent(
     *,
     openai: OpenAIService,
@@ -316,6 +347,14 @@ def _dedupe(values: list[str]) -> list[str]:
     return unique
 
 
+def _as_string_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item) for item in value if str(item).strip()]
+    return [str(value)]
+
+
 def _evidence_json(evidence: list[EvidenceItem]) -> str:
     return json.dumps([item.model_dump() for item in evidence], ensure_ascii=False)
 
@@ -323,4 +362,3 @@ def _evidence_json(evidence: list[EvidenceItem]) -> str:
 def _agent_summary(data: dict[str, Any]) -> str:
     keys = ", ".join(list(data.keys())[:5])
     return f"Extracted structured fields: {keys or 'none'}."
-

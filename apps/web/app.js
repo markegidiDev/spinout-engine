@@ -9,7 +9,12 @@ const firebaseConfig = window.SPINOUT_FIREBASE_CONFIG || {
   storageBucket: "",
   messagingSenderId: "",
   appId: "",
+  measurementId: "",
 };
+
+const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId && firebaseConfig.appId);
+let firebaseAuth = null;
+let firebaseInitError = null;
 
 const palette = {
   bg: "#141210",
@@ -175,6 +180,9 @@ const state = {
   file: null,
   isAuthenticated: false,
   authMode: "login",
+  authLoading: false,
+  authError: null,
+  userId: "",
   userEmail: "",
   sidebarOpen: true,
   recentChats: [],
@@ -225,6 +233,47 @@ function toast(message) {
     state.toasts = state.toasts.filter((item) => item.id !== id);
     render();
   }, 2600);
+}
+
+function initFirebaseAuth() {
+  if (!isFirebaseConfigured) {
+    firebaseInitError = "Firebase config missing";
+    return;
+  }
+
+  if (!window.firebase?.initializeApp || !window.firebase?.auth) {
+    firebaseInitError = "Firebase SDK unavailable";
+    return;
+  }
+
+  try {
+    const firebaseApp = window.firebase.apps?.length ? window.firebase.app() : window.firebase.initializeApp(firebaseConfig);
+    firebaseAuth = firebaseApp.auth ? firebaseApp.auth() : window.firebase.auth();
+    firebaseAuth.onAuthStateChanged(
+      (user) => {
+        state.authLoading = false;
+        state.authError = null;
+        if (user) {
+          state.isAuthenticated = true;
+          state.userId = user.uid;
+          state.userEmail = user.email || user.displayName || "Firebase user";
+        } else {
+          state.isAuthenticated = false;
+          state.userId = "";
+          state.userEmail = "";
+        }
+        render();
+      },
+      (error) => {
+        firebaseInitError = friendlyFirebaseError(error);
+        state.authLoading = false;
+        state.authError = firebaseInitError;
+        render();
+      }
+    );
+  } catch (error) {
+    firebaseInitError = friendlyFirebaseError(error);
+  }
 }
 
 function iconSpark(size = 18) {
@@ -355,7 +404,7 @@ function renderAuthPanel() {
           <div class="section-label">Workspace</div>
           <strong>${escapeHtml(state.userEmail || "Founder workspace")}</strong>
         </div>
-        <span class="chip primary">Signed in</span>
+        <span class="chip primary">Firebase account</span>
       </div>
       <div class="recent-mini">
         ${state.recentChats.length ? state.recentChats.slice(0, 3).map((chat, index) => `<button class="recent-mini-row" data-action="open-chat" data-chat-index="${index}">${escapeHtml(chat.title)}</button>`).join("") : `<span class="muted">No recent analyses yet</span>`}
@@ -364,19 +413,22 @@ function renderAuthPanel() {
   }
 
   const isRegister = state.authMode === "register";
+  const firebaseStatus = firebaseInitError ? "Firebase error" : isFirebaseConfigured ? "Firebase linked" : "Firebase missing";
+  const buttonLabel = state.authLoading ? "Working..." : isRegister ? "Create account" : "Log in";
   return html`<div class="auth-card card">
     <div class="auth-top">
       <div>
         <div class="section-label">${isRegister ? "Create Account" : "Login"}</div>
         <strong>${isRegister ? "Start a workspace" : "Welcome back"}</strong>
       </div>
-      <span class="chip">${firebaseConfig.projectId ? "Firebase linked" : "Firebase ready"}</span>
+      <span class="chip ${isFirebaseConfigured && !firebaseInitError ? "primary" : ""}">${firebaseStatus}</span>
     </div>
     <div class="auth-fields">
       <input id="auth-email" type="email" placeholder="Email" autocomplete="email">
       <input id="auth-password" type="password" placeholder="Password" autocomplete="${isRegister ? "new-password" : "current-password"}">
     </div>
-    <button class="btn primary full" data-action="${isRegister ? "register" : "login"}">${isRegister ? "Create account" : "Log in"}</button>
+    ${state.authError ? `<p class="auth-error">${escapeHtml(state.authError)}</p>` : ""}
+    <button class="btn primary full" data-action="${isRegister ? "register" : "login"}" ${state.authLoading ? "disabled" : ""}>${buttonLabel}</button>
     <button class="btn full" data-action="toggle-auth">${isRegister ? "Use existing account" : "Create account"}</button>
   </div>`;
 }
@@ -1100,6 +1152,65 @@ function truncate(text, length) {
   return source.length > length ? `${source.slice(0, length - 3)}...` : source;
 }
 
+function authFormValues() {
+  return {
+    email: document.querySelector("#auth-email")?.value?.trim() || "",
+    password: document.querySelector("#auth-password")?.value || "",
+  };
+}
+
+function friendlyFirebaseError(error) {
+  const code = error?.code || "";
+  if (code.includes("auth/invalid-email")) return "Email non valida.";
+  if (code.includes("auth/missing-password")) return "Inserisci la password.";
+  if (code.includes("auth/weak-password")) return "La password deve avere almeno 6 caratteri.";
+  if (code.includes("auth/email-already-in-use")) return "Esiste gia un account con questa email.";
+  if (code.includes("auth/user-not-found") || code.includes("auth/wrong-password") || code.includes("auth/invalid-credential")) {
+    return "Email o password non corrette.";
+  }
+  if (code.includes("auth/operation-not-allowed")) return "Abilita Email/Password in Firebase Authentication.";
+  if (code.includes("auth/unauthorized-domain")) return "Aggiungi questo dominio agli authorized domains di Firebase.";
+  return error?.message || "Errore Firebase Auth.";
+}
+
+async function handleAuthAction(action) {
+  if (!firebaseAuth) {
+    state.authError = firebaseInitError || "Firebase Auth non configurato.";
+    toast(state.authError);
+    render();
+    return;
+  }
+
+  const { email, password } = authFormValues();
+  if (!email || !password) {
+    state.authError = "Inserisci email e password.";
+    render();
+    return;
+  }
+
+  state.authLoading = true;
+  state.authError = null;
+  render();
+
+  try {
+    const credential =
+      action === "register"
+        ? await firebaseAuth.createUserWithEmailAndPassword(email, password)
+        : await firebaseAuth.signInWithEmailAndPassword(email, password);
+    state.isAuthenticated = true;
+    state.userId = credential.user?.uid || "";
+    state.userEmail = credential.user?.email || email;
+    state.screen = "upload";
+    toast(action === "register" ? "Account creato" : "Login effettuato");
+  } catch (error) {
+    state.authError = friendlyFirebaseError(error);
+    toast(state.authError);
+  } finally {
+    state.authLoading = false;
+    render();
+  }
+}
+
 app.addEventListener("click", async (event) => {
   const actionEl = event.target.closest("[data-action]");
   if (!actionEl) return;
@@ -1111,20 +1222,27 @@ app.addEventListener("click", async (event) => {
   }
   if (action === "toggle-auth") {
     state.authMode = state.authMode === "login" ? "register" : "login";
+    state.authError = null;
     render();
   }
   if (action === "login" || action === "register") {
-    const email = document.querySelector("#auth-email")?.value?.trim() || "founder@spinout.engine";
-    state.isAuthenticated = true;
-    state.userEmail = email;
-    state.screen = "upload";
-    toast(action === "register" ? "Workspace created" : "Logged in");
-    render();
+    await handleAuthAction(action);
   }
   if (action === "logout") {
+    if (firebaseAuth) {
+      state.authLoading = true;
+      render();
+      try {
+        await firebaseAuth.signOut();
+      } catch (error) {
+        toast(friendlyFirebaseError(error));
+      }
+    }
     state.isAuthenticated = false;
+    state.userId = "";
     state.userEmail = "";
     state.screen = "landing";
+    state.authLoading = false;
     render();
   }
   if (action === "open-chat") {
@@ -1198,4 +1316,5 @@ app.addEventListener("drop", (event) => {
   render();
 });
 
+initFirebaseAuth();
 render();

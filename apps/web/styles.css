@@ -361,6 +361,13 @@ input:focus-visible {
   padding: 0 13px;
 }
 
+.auth-error {
+  margin: 0;
+  color: var(--error);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .recent-mini {
   display: grid;
   gap: 8px;

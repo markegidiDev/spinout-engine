@@ -56,6 +56,14 @@ const fallbackAgents = [
   },
 ];
 
+const processingAgents = [
+  { agent: "Paper Intake Agent", status: "running", summary: "Waiting for extracted title, claims, limitations, and evidence snippets from the uploaded document." },
+  { agent: "Technical Novelty Agent", status: "queued", summary: "Waiting to assess novelty, moat, implementation difficulty, and unproven claims." },
+  { agent: "Market Wedge Agent", status: "queued", summary: "Waiting to identify the first customer, painful use case, buyer, and narrow wedge." },
+  { agent: "Competitor Risk Agent", status: "queued", summary: "Waiting to map alternatives, business risks, technical risks, and go-to-market objections." },
+  { agent: "Synthesis Critic Agent", status: "queued", summary: "Waiting to merge agent outputs into the final venture memo." },
+];
+
 const demoResponse = {
   sessionId: "SE-DEMO-A71C",
   memo: {
@@ -161,6 +169,9 @@ const state = {
   questionIndex: 0,
   currentQuestion: null,
   currentPersona: "Skeptical VC focused on market size, urgency, defensibility, and fundraising risk.",
+  currentAudio: null,
+  audioElement: null,
+  voiceLoading: false,
   founderAnswer: "",
   evaluation: null,
   evalHistory: [],
@@ -246,7 +257,7 @@ function topbar(active, options = {}) {
 }
 
 function currentSessionId() {
-  return state.result?.sessionId || "SE-DEMO-A71C";
+  return state.result?.sessionId || state.pendingSessionId || "SE-DEMO-A71C";
 }
 
 function currentMemo() {
@@ -258,6 +269,9 @@ function currentEvidence() {
 }
 
 function currentAgents() {
+  if (state.screen === "analysis" && !state.result) {
+    return processingAgents;
+  }
   const traces = state.result?.agentTraces?.length ? state.result.agentTraces : fallbackAgents;
   return traces.slice(0, 5);
 }
@@ -553,6 +567,8 @@ function renderInvestor() {
   const memo = currentMemo();
   const question = state.currentQuestion || memo.investorQuestions?.[state.questionIndex] || demoResponse.memo.investorQuestions[0];
   const dots = (memo.investorQuestions || demoResponse.memo.investorQuestions).slice(0, 4);
+  const hasAudio = Boolean(state.currentAudio?.url || state.currentAudio?.base64);
+  const voiceStatus = state.voiceLoading ? "LOADING" : state.voiceActive ? "LIVE" : hasAudio ? "READY" : "TEXT ONLY";
   return html`<main class="screen">
     ${topbar("Investor Room", { back: { action: "dashboard", label: "Back to Memo" } })}
     <section class="investor-grid">
@@ -563,7 +579,7 @@ function renderInvestor() {
             <div><strong>Mara</strong><p class="muted" style="margin:3px 0 0;font-size:12px">Skeptical Deep-Tech VC</p></div>
           </div>
           <div class="format-row" style="margin-bottom:0">
-            <span class="chip primary">Synthetic voice</span><span class="chip">Transcript ready</span>
+            <span class="chip ${hasAudio ? "primary" : ""}">${hasAudio ? "Synthetic voice ready" : "Text investor"}</span><span class="chip">Transcript ready</span>
           </div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px">
@@ -577,9 +593,10 @@ function renderInvestor() {
         <div class="card">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
             <strong style="font-size:12px">Voice Transmission</strong>
-            <span class="chip ${state.voiceActive ? "primary pulse" : ""}">${state.voiceActive ? "LIVE" : "STANDBY"}</span>
+            <span class="chip ${state.voiceActive ? "primary pulse" : ""}">${voiceStatus}</span>
           </div>
           <div class="wave ${state.voiceActive ? "" : "off"}">${state.voiceActive ? waveBars() : ""}</div>
+          ${hasAudio && !state.voiceActive ? `<button class="btn full" data-action="play-audio" style="margin-top:12px">Play audio</button>` : ""}
         </div>
         <button class="btn full" data-action="ask-next">Ask next question ${iconArrow()}</button>
       </aside>
@@ -738,12 +755,15 @@ async function startAnalysis(useFile) {
   state.screen = "analysis";
   state.analysisProgress = 0;
   state.analysisError = null;
+  state.pendingSessionId = useFile ? "UPLOAD-PENDING" : demoResponse.sessionId;
   state.agentStatuses = ["running", "queued", "queued", "queued", "queued"];
   state.result = null;
   state.evaluation = null;
   state.evalHistory = [];
   state.founderAnswer = "";
   state.currentQuestion = null;
+  state.currentAudio = null;
+  state.voiceLoading = false;
   const request = useFile ? analyzeFile(state.file) : analyzeDemo().catch(() => demoResponse);
   state.analysisPromise = request;
   render();
@@ -804,7 +824,9 @@ async function askInvestorQuestion() {
   state.questionIndex = (state.questionIndex + 1) % Math.min(4, memo.investorQuestions?.length || 4);
   state.evaluation = null;
   state.founderAnswer = "";
-  state.voiceActive = true;
+  state.currentAudio = null;
+  state.voiceActive = false;
+  state.voiceLoading = true;
   render();
   try {
     const response = await fetch(`${API_BASE}/investor/question`, {
@@ -816,17 +838,56 @@ async function askInvestorQuestion() {
       const payload = await response.json();
       state.currentQuestion = payload.question;
       state.currentPersona = payload.investorPersona;
+      state.currentAudio = {
+        url: payload.audioUrl || null,
+        base64: payload.audioBase64 || null,
+      };
+      await playInvestorAudio(state.currentAudio);
     } else {
       state.currentQuestion = memo.investorQuestions?.[state.questionIndex] || demoResponse.memo.investorQuestions[state.questionIndex];
+      state.currentAudio = null;
     }
   } catch {
     state.currentQuestion = memo.investorQuestions?.[state.questionIndex] || demoResponse.memo.investorQuestions[state.questionIndex];
+    state.currentAudio = null;
+    toast("Investor audio unavailable; showing text question");
   }
+  state.voiceLoading = false;
   render();
-  setTimeout(() => {
+}
+
+async function playInvestorAudio(audioPayload) {
+  const source = audioPayload?.url || (audioPayload?.base64 ? `data:audio/mpeg;base64,${audioPayload.base64}` : "");
+  if (!source) {
+    return;
+  }
+  if (state.audioElement) {
+    state.audioElement.pause();
+  }
+  const audio = new Audio(source);
+  state.audioElement = audio;
+  audio.onplay = () => {
+    state.voiceLoading = false;
+    state.voiceActive = true;
+    render();
+  };
+  audio.onended = () => {
     state.voiceActive = false;
     render();
-  }, 4200);
+  };
+  audio.onerror = () => {
+    state.voiceActive = false;
+    state.voiceLoading = false;
+    toast("Audio could not be played");
+    render();
+  };
+  try {
+    await audio.play();
+  } catch {
+    state.voiceActive = false;
+    state.voiceLoading = false;
+    toast("Audio ready. Click Play audio if it does not start automatically.");
+  }
 }
 
 async function submitAnswer() {
@@ -913,6 +974,7 @@ app.addEventListener("click", async (event) => {
   if (action === "dashboard") setScreen("dashboard");
   if (action === "investor-room") setScreen("investor");
   if (action === "ask-next") askInvestorQuestion();
+  if (action === "play-audio") playInvestorAudio(state.currentAudio);
   if (action === "submit-answer") submitAnswer();
   if (action === "final") setScreen("final");
   if (action === "copy-memo") {

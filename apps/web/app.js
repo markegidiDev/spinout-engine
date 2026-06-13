@@ -153,6 +153,7 @@ const state = {
   screen: "landing",
   file: null,
   analysisProgress: 0,
+  analysisError: null,
   agentStatuses: ["queued", "queued", "queued", "queued", "queued"],
   analysisPromise: null,
   result: null,
@@ -338,7 +339,7 @@ function renderUpload() {
       </div>
       <div class="card note">
         <span class="status-dot"></span>
-        <span>Files are sent only to your configured local API. If the backend is unavailable, the frontend falls back to local demo data.</span>
+        <span>Files are sent to the configured Spinout Engine API. Upload errors are shown directly so you can fix the backend or file.</span>
       </div>
     </section>
   </main>`;
@@ -728,16 +729,23 @@ function applyPalette() {
 }
 
 async function startAnalysis(useFile) {
+  if (useFile && !state.file) {
+    toast("Choose a PDF, DOCX, TXT, or MD file first");
+    state.screen = "upload";
+    render();
+    return;
+  }
   state.screen = "analysis";
   state.analysisProgress = 0;
+  state.analysisError = null;
   state.agentStatuses = ["running", "queued", "queued", "queued", "queued"];
   state.result = null;
   state.evaluation = null;
   state.evalHistory = [];
   state.founderAnswer = "";
   state.currentQuestion = null;
-  const request = useFile && state.file ? analyzeFile(state.file) : analyzeDemo();
-  state.analysisPromise = request.catch(() => demoResponse);
+  const request = useFile ? analyzeFile(state.file) : analyzeDemo().catch(() => demoResponse);
+  state.analysisPromise = request;
   render();
   runPipeline();
 }
@@ -753,8 +761,14 @@ async function runPipeline() {
     });
     render();
   }
-  state.result = await state.analysisPromise;
-  state.screen = "dashboard";
+  try {
+    state.result = await state.analysisPromise;
+    state.screen = "dashboard";
+  } catch (error) {
+    state.analysisError = error.message || "Document analysis failed";
+    state.screen = "upload";
+    toast(state.analysisError);
+  }
   render();
 }
 
@@ -772,7 +786,16 @@ async function analyzeFile(file) {
   const formData = new FormData();
   formData.append("file", file);
   const response = await fetch(`${API_BASE}/documents/analyze`, { method: "POST", body: formData });
-  if (!response.ok) throw new Error("Document analyze failed");
+  if (!response.ok) {
+    let detail = "Document analyze failed";
+    try {
+      const payload = await response.json();
+      detail = payload.detail || detail;
+    } catch {
+      detail = `${detail} (${response.status})`;
+    }
+    throw new Error(detail);
+  }
   return response.json();
 }
 

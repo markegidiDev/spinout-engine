@@ -2,6 +2,15 @@ const API_BASE =
   new URLSearchParams(window.location.search).get("api") ||
   "https://spinoutengineapi722de514-spinout-engine-api.functions.fnc.fr-par.scw.cloud";
 
+const firebaseConfig = window.SPINOUT_FIREBASE_CONFIG || {
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: "",
+};
+
 const palette = {
   bg: "#141210",
   surf: "#1D1A18",
@@ -160,6 +169,11 @@ const demoResponse = {
 const state = {
   screen: "landing",
   file: null,
+  isAuthenticated: false,
+  authMode: "login",
+  userEmail: "",
+  sidebarOpen: true,
+  recentChats: [],
   analysisProgress: 0,
   analysisError: null,
   agentStatuses: ["queued", "queued", "queued", "queued", "queued"],
@@ -237,16 +251,19 @@ function iconArrow() {
 }
 
 function brand(small = false) {
-  return html`<div class="brand">
+  return html`<button class="brand brand-button" data-action="home" aria-label="Go to home">
     <div class="brand-mark ${small ? "small" : ""}">${iconSpark(small ? 13 : 18)}</div>
     <div class="brand-name">Spinout Engine</div>
-  </div>`;
+  </button>`;
 }
 
 function topbar(active, options = {}) {
   const steps = ["Memo", "Investor Room", "Final Pitch"];
   return html`<header class="topbar">
-    <div class="brand-wrap">${options.back ? `<button class="btn" data-action="${options.back.action}">${iconBack()}${options.back.label}</button>` : brand(true)}</div>
+    <div class="brand-wrap">
+      ${brand(true)}
+      ${options.back ? `<button class="btn compact" data-action="${options.back.action}">${iconBack()}${options.back.label}</button>` : ""}
+    </div>
     <div class="workflow">
       ${steps
         .map((step) => `<span class="${active === step ? "active" : ""}">${step}</span>`)
@@ -280,7 +297,10 @@ function renderLanding() {
   return html`<main class="landing">
     <header class="topbar">
       ${brand()}
-      <span class="eyebrow">Hackathon Demo</span>
+      <div class="landing-actions">
+        ${state.isAuthenticated ? `<span class="chip primary">${escapeHtml(state.userEmail || "Workspace")}</span><button class="btn compact" data-action="logout">Log out</button>` : ""}
+        <span class="eyebrow">Hackathon Demo</span>
+      </div>
     </header>
     <section class="hero">
       <div class="hero-copy">
@@ -292,7 +312,8 @@ function renderLanding() {
           <button class="btn" data-action="start-demo">Try demo paper ${iconArrow()}</button>
         </div>
       </div>
-      <div class="hero-visual" aria-hidden="true">
+      <div class="hero-visual">
+        ${renderAuthPanel()}
         <div class="paper-preview">
           <div class="preview-page">
             <div class="preview-line primary short"></div>
@@ -320,6 +341,40 @@ function renderLanding() {
       <div class="card stat"><strong>4</strong><span>Investor Q&amp;As</span></div>
     </section>
   </main>`;
+}
+
+function renderAuthPanel() {
+  if (state.isAuthenticated) {
+    return html`<div class="auth-card card">
+      <div class="auth-top">
+        <div>
+          <div class="section-label">Workspace</div>
+          <strong>${escapeHtml(state.userEmail || "Founder workspace")}</strong>
+        </div>
+        <span class="chip primary">Signed in</span>
+      </div>
+      <div class="recent-mini">
+        ${state.recentChats.length ? state.recentChats.slice(0, 3).map((chat, index) => `<button class="recent-mini-row" data-action="open-chat" data-chat-index="${index}">${escapeHtml(chat.title)}</button>`).join("") : `<span class="muted">No recent analyses yet</span>`}
+      </div>
+    </div>`;
+  }
+
+  const isRegister = state.authMode === "register";
+  return html`<div class="auth-card card">
+    <div class="auth-top">
+      <div>
+        <div class="section-label">${isRegister ? "Create Account" : "Login"}</div>
+        <strong>${isRegister ? "Start a workspace" : "Welcome back"}</strong>
+      </div>
+      <span class="chip">${firebaseConfig.projectId ? "Firebase linked" : "Firebase ready"}</span>
+    </div>
+    <div class="auth-fields">
+      <input id="auth-email" type="email" placeholder="Email" autocomplete="email">
+      <input id="auth-password" type="password" placeholder="Password" autocomplete="${isRegister ? "new-password" : "current-password"}">
+    </div>
+    <button class="btn primary full" data-action="${isRegister ? "register" : "login"}">${isRegister ? "Create account" : "Log in"}</button>
+    <button class="btn full" data-action="toggle-auth">${isRegister ? "Use existing account" : "Create account"}</button>
+  </div>`;
 }
 
 function renderUpload() {
@@ -467,7 +522,7 @@ function renderDashboard() {
           <div class="list">
             ${evidence
               .slice(0, 4)
-              .map((item) => `<div class="list-row"><span class="badge">${escapeHtml(item.source || "source")}</span><span>${escapeHtml(item.excerpt)}</span></div>`)
+              .map((item) => `<div class="evidence-row"><span class="badge source-badge">${escapeHtml(item.source || "source")}</span><p>${escapeHtml(item.excerpt)}</p></div>`)
               .join("")}
           </div>
         </div>
@@ -682,14 +737,6 @@ function renderFinal() {
           <button class="btn" data-action="download-json">Download JSON</button>
           <button class="btn primary" data-action="save-report">Save investor report</button>
         </div>
-        <div class="card soft">
-          <div class="section-label" style="margin-bottom:9px">API Endpoints</div>
-          <div class="api-pill-row">
-            ${["POST /documents/analyze", "POST /demo/analyze", "POST /investor/question", "POST /investor/answer", "GET /sessions/:id"]
-              .map((item) => `<code>${item}</code>`)
-              .join("")}
-          </div>
-        </div>
       </div>
     </section>
   </main>`;
@@ -725,7 +772,38 @@ function render() {
             : state.screen === "investor"
               ? renderInvestor()
               : renderFinal();
-  app.innerHTML = `<div class="app-shell">${renderToasts()}${content}</div>`;
+  app.innerHTML = `<div class="app-shell ${state.isAuthenticated ? "with-sidebar" : ""}">${renderToasts()}${state.isAuthenticated ? renderSidebar(content) : content}</div>`;
+}
+
+function renderSidebar(content) {
+  return html`<div class="workspace-layout ${state.sidebarOpen ? "sidebar-open" : "sidebar-closed"}">
+    <aside class="workspace-sidebar">
+      <button class="sidebar-toggle" data-action="toggle-sidebar" aria-label="Toggle sidebar">${state.sidebarOpen ? "&lt;" : "&gt;"}</button>
+      <div class="sidebar-brand">${brand(true)}</div>
+      <button class="btn primary full sidebar-new" data-action="go-upload">${state.sidebarOpen ? "New analysis" : "+"}</button>
+      <div class="sidebar-section">
+        <div class="section-label">${state.sidebarOpen ? "Recent chats" : "Recent"}</div>
+        <div class="chat-list">
+          ${
+            state.recentChats.length
+              ? state.recentChats
+                  .map(
+                    (chat, index) => `<button class="chat-row ${state.result?.sessionId === chat.sessionId ? "active" : ""}" data-action="open-chat" data-chat-index="${index}">
+                    <span class="chat-dot"></span><span class="chat-title">${escapeHtml(chat.title)}</span>
+                  </button>`
+                  )
+                  .join("")
+              : `<div class="empty-chat">${state.sidebarOpen ? "No analyses yet" : "-"}</div>`
+          }
+        </div>
+      </div>
+      <div class="sidebar-user">
+        <span class="avatar-mini">${escapeHtml((state.userEmail || "S").slice(0, 1).toUpperCase())}</span>
+        <span class="sidebar-email">${escapeHtml(state.userEmail || "Workspace")}</span>
+      </div>
+    </aside>
+    <div class="workspace-main">${content}</div>
+  </div>`;
 }
 
 function applyPalette() {
@@ -783,6 +861,7 @@ async function runPipeline() {
   }
   try {
     state.result = await state.analysisPromise;
+    rememberCurrentAnalysis();
     state.screen = "dashboard";
   } catch (error) {
     state.analysisError = error.message || "Document analysis failed";
@@ -790,6 +869,17 @@ async function runPipeline() {
     toast(state.analysisError);
   }
   render();
+}
+
+function rememberCurrentAnalysis() {
+  if (!state.result?.sessionId || !state.result?.memo) return;
+  const entry = {
+    sessionId: state.result.sessionId,
+    title: state.result.memo.title || state.result.memo.oneLineCompany || "Untitled analysis",
+    result: state.result,
+    createdAt: new Date().toISOString(),
+  };
+  state.recentChats = [entry, ...state.recentChats.filter((chat) => chat.sessionId !== entry.sessionId)].slice(0, 8);
 }
 
 function delay(ms) {
@@ -967,6 +1057,37 @@ app.addEventListener("click", async (event) => {
   if (!actionEl) return;
   const action = actionEl.dataset.action;
   if (action === "home") setScreen("landing");
+  if (action === "toggle-sidebar") {
+    state.sidebarOpen = !state.sidebarOpen;
+    render();
+  }
+  if (action === "toggle-auth") {
+    state.authMode = state.authMode === "login" ? "register" : "login";
+    render();
+  }
+  if (action === "login" || action === "register") {
+    const email = document.querySelector("#auth-email")?.value?.trim() || "founder@spinout.engine";
+    state.isAuthenticated = true;
+    state.userEmail = email;
+    state.screen = "upload";
+    toast(action === "register" ? "Workspace created" : "Logged in");
+    render();
+  }
+  if (action === "logout") {
+    state.isAuthenticated = false;
+    state.userEmail = "";
+    state.screen = "landing";
+    render();
+  }
+  if (action === "open-chat") {
+    const index = Number(actionEl.dataset.chatIndex);
+    const chat = state.recentChats[index];
+    if (chat?.result) {
+      state.result = chat.result;
+      state.screen = "dashboard";
+      render();
+    }
+  }
   if (action === "go-upload") setScreen("upload");
   if (action === "browse-file") document.querySelector("#file-input")?.click();
   if (action === "start-demo") startAnalysis(false);

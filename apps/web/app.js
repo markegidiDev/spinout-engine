@@ -201,6 +201,7 @@ const state = {
   audioElement: null,
   voiceLoading: false,
   founderAnswer: "",
+  answerLoading: false,
   evaluation: null,
   evalHistory: [],
   voiceActive: false,
@@ -834,7 +835,7 @@ function renderInvestor() {
             <button class="btn full" data-action="stop-audio" ${!hasAudio && !state.voiceActive ? "disabled" : ""}>Stop</button>
           </div>
         </div>
-        <button class="btn full" data-action="ask-next">Ask next question ${iconArrow()}</button>
+        <button class="btn full" data-action="ask-next" ${state.answerLoading ? "disabled" : ""}>Ask next question ${iconArrow()}</button>
       </aside>
       <section class="pane">
         <div class="card" style="border-left:3px solid var(--primary)">
@@ -843,11 +844,13 @@ function renderInvestor() {
         </div>
         <div>
           <div class="section-label" style="margin-bottom:8px">Your Answer</div>
-          <textarea class="answer-area" id="founder-answer" placeholder="Type your answer as the founder...">${escapeHtml(state.founderAnswer)}</textarea>
-          <button class="btn primary full" data-action="submit-answer" style="margin-top:10px">Submit answer for evaluation ${iconArrow()}</button>
+          <textarea class="answer-area" id="founder-answer" placeholder="Type your answer as the founder..." ${state.answerLoading ? "disabled" : ""}>${escapeHtml(state.founderAnswer)}</textarea>
+          <button class="btn primary full" data-action="submit-answer" style="margin-top:10px" ${state.answerLoading ? "disabled aria-busy=\"true\"" : ""}>
+            ${state.answerLoading ? `<span class="spinner-sm" aria-hidden="true"></span> Evaluating answer...` : `Submit answer for evaluation ${iconArrow()}`}
+          </button>
         </div>
         ${state.evaluation ? renderEvaluation(state.evaluation) : ""}
-        ${state.evalHistory.length >= 2 ? `<button class="btn primary full" data-action="final">Generate Final Pitch ${iconArrow()}</button>` : ""}
+        ${state.evalHistory.length >= 2 ? `<button class="btn primary full" data-action="final" ${state.answerLoading ? "disabled" : ""}>Generate Final Pitch ${iconArrow()}</button>` : ""}
       </section>
     </section>
   </main>`;
@@ -1273,12 +1276,16 @@ function stopInvestorAudio({ silent = false } = {}) {
 }
 
 async function submitAnswer() {
+  if (state.answerLoading) return;
   const answer = state.founderAnswer.trim();
   if (!answer) {
     toast("Add an answer first");
     return;
   }
   const question = state.currentQuestion || currentMemo().investorQuestions?.[state.questionIndex] || demoResponse.memo.investorQuestions[0];
+  state.answerLoading = true;
+  state.evaluation = null;
+  render();
   try {
     const response = await fetch(`${API_BASE}/investor/answer`, {
       method: "POST",
@@ -1289,6 +1296,8 @@ async function submitAnswer() {
     state.evaluation = await response.json();
   } catch {
     state.evaluation = localEvaluation(answer);
+  } finally {
+    state.answerLoading = false;
   }
   state.evalHistory.push({ question, answer, score: state.evaluation.score });
   render();

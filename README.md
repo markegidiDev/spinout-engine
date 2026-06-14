@@ -48,6 +48,57 @@ Spinout Engine is moving toward a private, closed-source product model. Pricing 
 
 Pricing is presentational and subject to change before commercial release.
 
+## Backend Configuration
+
+The API stores uploaded documents, generated memo exports, and optional ElevenLabs audio in an S3-compatible bucket. For AWS S3, create a private bucket and configure the backend environment in `apps/api/.env`:
+
+```env
+S3_ENDPOINT=https://s3.eu-south-1.amazonaws.com
+S3_REGION=eu-south-1
+S3_BUCKET=your-bucket-name
+S3_ACCESS_KEY=your-iam-access-key
+S3_SECRET_KEY=your-iam-secret-key
+SAVE_AUDIO_TO_S3=true
+```
+
+Use the AWS region where the bucket was created. The bucket can stay private because the API generates presigned URLs for audio playback.
+
+Create a dedicated IAM user or role with only the S3 permissions the API needs:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:GetObject"],
+      "Resource": "arn:aws:s3:::your-bucket-name/*"
+    }
+  ]
+}
+```
+
+If audio is played from the browser through presigned S3 URLs, configure bucket CORS for the deployed frontend origin:
+
+```json
+[
+  {
+    "AllowedOrigins": ["http://localhost:3000", "https://your-frontend-domain.com"],
+    "AllowedMethods": ["GET"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3000
+  }
+]
+```
+
+After installing backend dependencies, a quick storage smoke test is:
+
+```powershell
+cd apps/api
+python -c "from src.config import get_settings; from src.services.storage_service import StorageService; s=get_settings(); st=StorageService(s); key='healthcheck/s3-test.txt'; st.upload_bytes(key, b'ok from spinout-engine', 'text/plain'); print(st.generate_presigned_url(key)[:120])"
+```
+
 ## Sponsor And Partner Fit
 
 Spinout Engine is designed to support sponsored innovation programs where research output needs to be converted into market-ready narratives at scale.

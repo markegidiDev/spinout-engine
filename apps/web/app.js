@@ -356,8 +356,14 @@ function currentAgents() {
 
 function renderLanding() {
   return html`<main class="landing">
-    <header class="topbar">
+    <header class="topbar landing-topbar">
+      <a id="home" class="section-anchor" aria-hidden="true"></a>
       ${brand()}
+      <nav class="landing-nav" aria-label="Primary navigation">
+        <a href="#home">Home</a>
+        <a href="#about">About</a>
+        <a href="#pricing">Pricing</a>
+      </nav>
       <div class="landing-actions">
         ${state.isAuthenticated
           ? `<span class="chip primary">${escapeHtml(state.userEmail || "Workspace")}</span><button class="btn compact" data-action="logout">Log out</button>`
@@ -410,6 +416,91 @@ function renderLanding() {
         <span>Investor Q&amp;As</span>
       </div>
     </section>
+    <section id="about" class="landing-section about-section">
+      <div class="section-kicker">About</div>
+      <div class="section-heading">
+        <h2>Commercialize research before the opportunity gets lost.</h2>
+        <p>Spinout Engine translates dense technical material into the questions founders, sponsors, and investors actually need answered.</p>
+      </div>
+      <div class="about-grid">
+        <article class="about-item">
+          <span>01</span>
+          <h3>Research intake</h3>
+          <p>Upload a paper, deck, or technical note and extract the claims, novelty, evidence, and limitations that matter for company formation.</p>
+        </article>
+        <article class="about-item">
+          <span>02</span>
+          <h3>Venture memo</h3>
+          <p>Turn technical output into a clear problem, first customer, wedge, moat, risks, competitors, and missing evidence.</p>
+        </article>
+        <article class="about-item">
+          <span>03</span>
+          <h3>Investor readiness</h3>
+          <p>Practice the questions that expose weak assumptions before the next sponsor review, accelerator screen, or investor meeting.</p>
+        </article>
+      </div>
+    </section>
+    <section id="pricing" class="landing-section pricing-section">
+      <div class="section-kicker">Pricing</div>
+      <div class="section-heading">
+        <h2>Choose the right depth of venture analysis.</h2>
+        <p>Start with a limited research-to-memo trial, then scale into investor practice, exports, team review, and sponsor-ready portfolio analysis. Plan limits are positioning copy in this demo.</p>
+      </div>
+      <div class="pricing-grid">
+        <article class="pricing-card">
+          <div class="plan-top">
+            <h3>Free</h3>
+            <div class="plan-price">$0</div>
+          </div>
+          <p class="plan-audience">For visitors testing the concept.</p>
+          <ul>
+            <li>2 paper analyses total</li>
+            <li>Upload PDF, DOCX, TXT, or MD files</li>
+            <li>Venture memo preview</li>
+            <li>Readiness score snapshot</li>
+            <li>Investor Room not included</li>
+            <li>Full exports not included</li>
+          </ul>
+          <button class="btn primary full" data-action="go-upload">Start free</button>
+        </article>
+        <article class="pricing-card highlighted">
+          <div class="plan-badge">Most useful</div>
+          <div class="plan-top">
+            <h3>Starter</h3>
+            <div class="plan-price">$29<span>/mo</span></div>
+          </div>
+          <p class="plan-audience">For solo founders and early spinout teams.</p>
+          <ul>
+            <li>30 paper analyses per month</li>
+            <li>Full AI-generated venture memo</li>
+            <li>Text Investor Room Q&amp;A practice</li>
+            <li>Readiness score with risk breakdown</li>
+            <li>Competitor and wedge deep-dive</li>
+            <li>Markdown and PDF export</li>
+            <li>Saved project history</li>
+          </ul>
+          <button class="btn primary full" data-action="open-auth-modal">Choose Starter</button>
+        </article>
+        <article class="pricing-card">
+          <div class="plan-top">
+            <h3>Premium</h3>
+            <div class="plan-price">$99<span>/mo</span></div>
+          </div>
+          <p class="plan-audience">For teams, studios, accelerators, and sponsor reviews.</p>
+          <ul>
+            <li>100+ analyses per month</li>
+            <li>Multi-document analysis per project</li>
+            <li>Investor personas for VC, sponsor, and grant review</li>
+            <li>Audio-enabled Investor Room when configured</li>
+            <li>Sponsor-ready PDF reports</li>
+            <li>Team workspace for 3-5 seats</li>
+            <li>Portfolio dashboard for comparing spinout ideas</li>
+            <li>Custom scoring rubric and priority processing</li>
+          </ul>
+          <button class="btn primary full" data-action="open-auth-modal">Go Premium</button>
+        </article>
+      </div>
+    </section>
     <footer class="landing-footer">
       <div class="footer-inner">
         <div class="footer-brand">
@@ -418,7 +509,9 @@ function renderLanding() {
         </div>
         <p class="footer-tagline">From research paper to venture-ready pitch in seconds.</p>
         <div class="footer-meta">
-          <span>© ${new Date().getFullYear()}</span>
+          <a href="#privacy-policy">Privacy Policy</a>
+          <a href="#refund-policy">Refund Policy</a>
+          <span class="footer-year">&copy; ${new Date().getFullYear()}</span>
         </div>
       </div>
     </footer>
@@ -472,7 +565,7 @@ function renderUpload() {
     </header>
     <section class="center-wrap">
       <h1 class="screen-title">Upload your paper</h1>
-      <p class="muted">5 AI agents will analyze it and build a venture memo in about 9 seconds.</p>
+      <p class="muted">5 AI agents will analyze it and build a venture memo in less than 30 seconds.</p>
       <input id="file-input" class="hidden" type="file" accept=".pdf,.txt,.md,.docx">
       <div class="dropzone ${state.dragging ? "dragging" : ""}" data-action="browse-file">
         <div>

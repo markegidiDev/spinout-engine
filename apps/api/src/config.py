@@ -6,12 +6,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 API_DIR = Path(__file__).resolve().parents[1]
-REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=(REPO_ROOT / ".env", API_DIR / ".env"),
+        env_file=API_DIR / ".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",

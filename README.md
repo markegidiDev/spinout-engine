@@ -1,191 +1,67 @@
 # Spinout Engine
 
-Spinout Engine turns a research paper, technical note, or deck into a startup memo: problem, customer, first wedge, risks, competitors, and investor questions. After the memo, the app opens a lightweight Investor Room where an AI investor asks questions and scores the founder's answers.
+Spinout Engine turns technical research into venture-ready startup material. Upload a paper, deck, or technical note and receive a founder-grade venture memo that clarifies the problem, customer, wedge, risks, competitors, and investor questions.
 
-The repo has two apps:
+It is built for teams that need to move from promising research to a commercial story quickly: university spinout programs, venture studios, accelerators, corporate innovation teams, and founders validating deep-tech ideas.
 
-- `apps/api`: Python/FastAPI backend
-- `apps/web`: static HTML, CSS, and vanilla JavaScript frontend
+## Why It Exists
 
-The demo can run without external API keys. In that mode it returns complete fixture data, which is useful for testing the full flow quickly.
+Great research often stalls before it becomes a fundable company. The science may be strong, but the commercial narrative is fragmented across papers, slides, advisor notes, and early customer conversations.
 
-## Stack
+Spinout Engine closes that gap by translating research into the language of venture building:
 
-Backend:
+- What problem is painful enough to matter?
+- Who is the first buyer?
+- What narrow wedge can become a company?
+- What proof is still missing?
+- What will an investor challenge first?
 
-- FastAPI + Uvicorn
-- Pydantic for config and payload schemas
-- OpenAI API for the main agent pipeline
-- Gemini as an optional reviewer
-- ElevenLabs for optional investor voice
-- Scaleway Object Storage through the S3-compatible API and `boto3`
+## Product Experience
 
-Frontend:
+Spinout Engine guides a user through a focused venture-building workflow:
 
-- HTML/CSS/JavaScript with no build framework
-- Optional Firebase Auth
-- API URL configurable through `apps/web/env.js` or the `?api=` query string
+1. Upload a research paper, technical memo, or deck.
+2. Let the analysis agents extract technical novelty, evidence, risks, market wedge, and competitive context.
+3. Review a venture memo written for founders and investors.
+4. Practice investor questions in the Investor Room.
+5. Export the memo or investor report for follow-up work.
 
-Deployment target:
+The result is a sharper starting point for founder interviews, sponsor reviews, accelerator screening, and early investor conversations.
 
-- frontend on Vercel
-- FastAPI backend on Vercel
-- private bucket on Scaleway Object Storage
+## Built For
 
-## Local Setup
+- Research commercialization teams assessing which papers deserve company formation support.
+- Venture studios turning technical insight into validated startup concepts.
+- Accelerators helping founders sharpen their first market wedge.
+- Corporate innovation teams reviewing research-backed business opportunities.
+- Founders who need a clear investor narrative before the next meeting.
 
-### Backend
+## Pricing Preview
 
-The backend reads environment variables from the root `.env` file and, if present, from `apps/api/.env`.
+Spinout Engine is moving toward a private, closed-source product model. Pricing below is a public preview of the intended SaaS packaging.
 
-```bash
-cd apps/api
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn src.main:app --host 0.0.0.0 --port 8080
-```
+| Plan | Price | Best for | Includes |
+| --- | ---: | --- | --- |
+| Free | $0 | Visitors testing the concept | Upload access, up to 2 paper analyses, venture memo preview, no Investor Room access |
+| Starter | $29/mo | Solo founders and early spinout teams | Document uploads, full venture memo, five-agent workflow, Investor Room Q&A, Markdown/JSON export |
+| Premium | $99/mo | Serious venture-building workflows | Everything in Starter, workspace UI, recent analyses, audio-enabled Investor Room when configured, investor report export |
 
-On macOS/Linux, activate the virtualenv with:
+Pricing is presentational and subject to change before commercial release.
 
-```bash
-source .venv/bin/activate
-```
+## Sponsor And Partner Fit
 
-Quick smoke test:
+Spinout Engine is designed to support sponsored innovation programs where research output needs to be converted into market-ready narratives at scale.
 
-```bash
-curl http://localhost:8080/health
-curl -X POST http://localhost:8080/demo/analyze
-```
+Potential sponsor use cases include:
 
-### Frontend
+- Screening research portfolios for spinout potential.
+- Preparing founders before investor office hours.
+- Standardizing venture memos across accelerator cohorts.
+- Helping technical teams communicate market opportunity clearly.
+- Producing repeatable diligence material for partner review.
 
-```bash
-cd apps/web
-copy env.example.js env.js
-node dev-server.cjs 3000
-```
+## Private Access
 
-Then open:
+Spinout Engine is transitioning away from public developer distribution. Future access is expected to be managed through private deployments, hosted workspaces, partner pilots, or commercial subscriptions.
 
-```text
-http://localhost:3000
-```
-
-The frontend reads `window.SPINOUT_API_BASE` from `apps/web/env.js`. You can also override the API URL on the fly:
-
-```text
-http://localhost:3000/?api=http://localhost:8080
-```
-
-## Scaleway Object Storage
-
-Create a private bucket, for example:
-
-```text
-spinout-engine-prod
-```
-
-You do not need to create folders manually. The backend writes objects using these prefixes:
-
-- `uploads/<session_id>/...`
-- `outputs/<session_id>/memo.json`
-- `outputs/<session_id>/memo.md`
-- `audio/<session_id>/question-1.mp3`
-
-The Scaleway key used by the backend needs read/write access to objects in that bucket. In practice, you need:
-
-- `S3_ACCESS_KEY`: access key
-- `S3_SECRET_KEY`: secret key
-
-The secret key is shown only once by Scaleway, so save it somewhere safe immediately.
-
-## Environment
-
-The backend example file is:
-
-```text
-apps/api/.env.example
-```
-
-Main variables:
-
-- `ALLOWED_ORIGINS`: comma-separated frontend origins
-- `OPENAI_API_KEY`: required for real document analysis
-- `OPENAI_BASE_URL`: optional OpenAI-compatible endpoint
-- `OPENAI_FALLBACK_API_KEY`: fallback OpenAI key if the primary provider fails
-- `GEMINI_API_KEY`: optional reviewer
-- `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID`: optional investor audio
-- `S3_ENDPOINT=https://s3.fr-par.scw.cloud`
-- `S3_REGION=fr-par`
-- `S3_BUCKET`: Scaleway bucket name
-- `S3_ACCESS_KEY`: Scaleway access key
-- `S3_SECRET_KEY`: Scaleway secret key
-- `ENABLE_DEMO_FIXTURES=true`: keeps the demo usable even without AI providers
-- `SAVE_AUDIO_TO_S3=true`: stores generated MP3 files in Object Storage when configured
-
-For Firebase Auth, copy `apps/web/env.example.js` to `apps/web/env.js` and fill in the Firebase project config. If it is missing, the app still works as a demo.
-
-Frontend environment variables for Vercel are listed in:
-
-```text
-apps/web/.env.example
-```
-
-## API Routes
-
-- `GET /health`
-- `POST /demo/analyze`
-- `POST /documents/analyze` with multipart field `file`
-- `POST /investor/question`
-- `POST /investor/answer`
-- `GET /sessions/{sessionId}`
-
-Accepted upload formats: `.pdf`, `.txt`, `.md`, `.docx`.
-The upload size is controlled by `MAX_UPLOAD_MB`.
-
-Vercel note: the backend runs as a Vercel Function. Keep production uploads below the platform payload limit; for this demo, set `MAX_UPLOAD_MB=4` on Vercel.
-
-## Vercel Deployment
-
-Use two Vercel projects.
-
-Backend project:
-
-- root directory: `apps/api`
-- framework preset: Other
-- entrypoint: `app.py`
-- environment variables: all backend variables from your `.env`
-- `ALLOWED_ORIGINS`: the final Vercel frontend URL
-
-Frontend project:
-
-- root directory: `apps/web`
-- build command: `node build-env.cjs`
-- output directory: `.`
-- environment variables: copy from `apps/web/.env.example`
-- minimum required variable:
-
-```text
-SPINOUT_API_BASE=https://your-api.vercel.app
-```
-
-The `VITE_FIREBASE_*` variables are optional. If you add them in Vercel, `build-env.cjs` generates `env.js` with the frontend config during deployment.
-
-## Docker
-
-The backend can still run as a container:
-
-```bash
-docker build -t spinout-engine-api ./apps/api
-docker run --env-file ./.env -p 8080:8080 spinout-engine-api
-```
-
-## Security Notes
-
-- Never commit `.env` or `apps/web/env.js`
-- Keep the Scaleway bucket private
-- Investor audio is served through presigned URLs
-- Uploaded filenames are sanitized
-- Do not use `ALLOWED_ORIGINS=*` in production
+For sponsorship, pilot access, or partnership conversations, use the product demo and pricing preview as the starting point for discussion.

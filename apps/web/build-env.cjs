@@ -19,7 +19,6 @@ function loadEnvFile(filePath) {
   }
 }
 
-loadEnvFile(path.resolve(__dirname, "../../.env"));
 loadEnvFile(path.resolve(__dirname, ".env"));
 
 const firebaseConfig = {

@@ -1,34 +1,41 @@
 # Spinout Engine
 
-Spinout Engine turns a research paper, deck, or technical note into a venture-ready paper-to-company memo, then creates an AI Investor Room where a synthetic investor stress-tests the founder's pitch.
+Spinout Engine prende un paper, una nota tecnica o un deck e lo trasforma in un memo da startup: problema, cliente, wedge iniziale, rischi, concorrenza e domande da investitore. Dopo il memo c'è anche una piccola "Investor Room", dove un investitore AI fa domande e valuta le risposte del founder.
 
-This repo contains the backend API in `apps/api` and a static frontend in `apps/web`.
+Il progetto è diviso in due parti:
 
-## Backend Stack
+- `apps/api`: API backend in Python/FastAPI
+- `apps/web`: frontend statico in HTML, CSS e JavaScript vanilla
 
-- Python FastAPI
-- OpenAI API for main AI agents
-- Gemini API as optional reviewer
-- ElevenLabs for optional synthetic investor voice
-- Scaleway Object Storage via S3-compatible `boto3`
-- Docker for deploy to Scaleway Serverless Containers
+La demo può girare anche senza chiavi API esterne: in quel caso usa dati finti ma completi, utili per testare il flusso end-to-end.
 
-## Local Setup
+## Stack
+
+Backend:
+
+- FastAPI + Uvicorn
+- Pydantic per config e schema dei payload
+- OpenAI API per gli agenti principali
+- Gemini come reviewer opzionale
+- ElevenLabs per la voce dell'investitore, opzionale
+- `boto3` con Scaleway Object Storage, compatibile S3
+- Docker per deploy
 
 Frontend:
 
-```bash
-cd apps/web
-node dev-server.cjs 3000
-```
+- HTML/CSS/JavaScript senza build step
+- Firebase Auth opzionale
+- API configurabile via query string, utile per testare backend diversi
 
-Open `http://localhost:3000`. The frontend calls `http://localhost:8080` by default. To point it at another API URL, use:
+Infra pensata per la demo:
 
-```bash
-http://localhost:3000/?api=https://YOUR-API-URL
-```
+- API deployabile su Scaleway Serverless Containers
+- immagini Docker pubblicabili su GitHub Container Registry
+- file caricati, memo e audio salvabili su Scaleway Object Storage
 
-Backend:
+## Avvio locale
+
+### Backend
 
 ```bash
 cd apps/api
@@ -39,126 +46,110 @@ copy .env.example .env
 uvicorn src.main:app --host 0.0.0.0 --port 8080
 ```
 
-On macOS/Linux, use `source .venv/bin/activate` instead of the Windows activation command.
+Su macOS/Linux cambia solo l'attivazione del virtualenv:
 
-The demo route works without external API keys:
+```bash
+source .venv/bin/activate
+```
+
+Test rapido:
 
 ```bash
 curl http://localhost:8080/health
 curl -X POST http://localhost:8080/demo/analyze
 ```
 
-## Environment
+### Frontend
 
-Use `apps/api/.env.example` as the template. Never commit `.env`.
+```bash
+cd apps/web
+node dev-server.cjs 3000
+```
 
-Important values:
+Poi apri:
 
-- `ALLOWED_ORIGINS`: comma-separated frontend origins. Do not use `*` in production.
-- `OPENAI_API_KEY`: required for real document analysis.
-- `OPENAI_BASE_URL`: optional OpenAI-compatible endpoint such as Scaleway Generative APIs.
-- `OPENAI_FALLBACK_API_KEY`: optional classic OpenAI key if the primary OpenAI-compatible provider fails.
-- `GEMINI_API_KEY`: optional second reviewer.
-- `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID`: optional investor audio.
-- `S3_*`: Scaleway Object Storage credentials for uploads, memo outputs, and MP3 storage.
-- `ENABLE_DEMO_FIXTURES=true`: lets the API return a complete demo memo if OpenAI is unavailable.
+```text
+http://localhost:3000
+```
 
-## API Routes
+Di default il frontend usa l'API Scaleway già impostata in `apps/web/app.js`. Per puntarlo al backend locale:
+
+```text
+http://localhost:3000/?api=http://localhost:8080
+```
+
+## Configurazione
+
+Il template è qui:
+
+```text
+apps/api/.env.example
+```
+
+Le variabili più importanti:
+
+- `ALLOWED_ORIGINS`: origin del frontend, separate da virgola
+- `OPENAI_API_KEY`: necessaria per analizzare documenti reali
+- `OPENAI_BASE_URL`: opzionale, per endpoint OpenAI-compatible
+- `OPENAI_FALLBACK_API_KEY`: chiave OpenAI alternativa se il provider principale fallisce
+- `GEMINI_API_KEY`: reviewer opzionale
+- `ELEVENLABS_API_KEY` e `ELEVENLABS_VOICE_ID`: audio dell'investitore
+- `S3_*`: storage Scaleway/S3 per upload, output e MP3
+- `ENABLE_DEMO_FIXTURES=true`: mantiene attiva la demo anche senza provider AI
+- `SAVE_AUDIO_TO_S3=true`: salva gli MP3 su S3 quando lo storage è configurato
+
+Per Firebase Auth, copia `apps/web/env.example.js` in `apps/web/env.js` e inserisci la config del progetto Firebase. Se manca, l'app resta comunque usabile come demo.
+
+## API principali
 
 - `GET /health`
 - `POST /demo/analyze`
-- `POST /documents/analyze` with multipart field `file`
+- `POST /documents/analyze` con multipart field `file`
 - `POST /investor/question`
 - `POST /investor/answer`
 - `GET /sessions/{sessionId}`
 
-Allowed upload extensions: `.pdf`, `.txt`, `.md`, `.docx`. Upload size is controlled by `MAX_UPLOAD_MB`.
+Formati accettati per upload: `.pdf`, `.txt`, `.md`, `.docx`.
+La dimensione massima si cambia con `MAX_UPLOAD_MB`.
 
 ## Docker
 
-Build the image:
+Build:
 
 ```bash
 docker build -t spinout-engine-api ./apps/api
 ```
 
-Run locally:
+Run locale:
 
 ```bash
 docker run --env-file ./apps/api/.env -p 8080:8080 spinout-engine-api
 ```
 
-## GitHub Container Registry
+## Deploy
 
-Tag for GHCR:
+Il flusso previsto è semplice:
+
+1. build dell'immagine Docker
+2. push su GitHub Container Registry
+3. deploy dell'immagine su Scaleway Serverless Containers
+4. configurazione delle env/secrets dalla `.env`
+5. `ALLOWED_ORIGINS` puntato al dominio del frontend
+
+Comandi base per GHCR:
 
 ```bash
 docker tag spinout-engine-api ghcr.io/USERNAME/spinout-engine-api:latest
-```
-
-Login to GHCR:
-
-```bash
 echo GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
-```
-
-Push:
-
-```bash
 docker push ghcr.io/USERNAME/spinout-engine-api:latest
 ```
 
-## Scaleway Serverless Containers
+Su Scaleway il container deve esporre la porta `8080` e avere HTTP pubblico abilitato.
 
-1. Build image:
+## Note di sicurezza
 
-   ```bash
-   docker build -t spinout-engine-api ./apps/api
-   ```
-
-2. Tag for GitHub Container Registry:
-
-   ```bash
-   docker tag spinout-engine-api ghcr.io/USERNAME/spinout-engine-api:latest
-   ```
-
-3. Login to GHCR:
-
-   ```bash
-   echo GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
-   ```
-
-4. Push:
-
-   ```bash
-   docker push ghcr.io/USERNAME/spinout-engine-api:latest
-   ```
-
-5. In Scaleway Console:
-
-   - Go to Serverless > Containers
-   - Create container
-   - Image: `ghcr.io/USERNAME/spinout-engine-api:latest`
-   - Port: `8080`
-   - Public HTTP: enabled
-   - Min scale: `1` for demo
-   - Max scale: `2` or `3`
-   - Memory: `1 GB` if available
-   - Add env/secrets from `.env.example`
-   - Set `ALLOWED_ORIGINS` to the frontend URL
-   - Deploy
-   - Copy public container URL
-
-6. Test:
-
-   ```bash
-   curl https://YOUR-SCALEWAY-CONTAINER-URL/health
-   ```
-
-## Security Notes
-
-- `.env` is ignored and must not be committed.
-- API keys, S3 secrets, Authorization headers, presigned URLs, uploaded document content, and raw private prompts are not logged.
-- Uploaded filenames are sanitized and S3 object keys are UUID scoped.
-- The bucket should remain private. Demo playback uses presigned URLs only.
-- External providers are optional where possible and fail gracefully for the demo.
+- Non committare mai `.env` o `apps/web/env.js`
+- Il bucket S3/Scaleway deve restare privato
+- Gli audio vengono serviti con URL presigned
+- I nomi file caricati vengono sanitizzati
+- In produzione evita `ALLOWED_ORIGINS=*`

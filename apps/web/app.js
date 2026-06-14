@@ -56,22 +56,22 @@ const fallbackAgents = [
   {
     agent: "Technical Novelty Agent",
     status: "ok",
-    summary: "Novelty appears strongest around compressed temporal models running close to industrial machines.",
+    summary: "Novelty appears strongest around low-cost optical sensing paired with edge inference for field use.",
   },
   {
     agent: "Market Wedge Agent",
     status: "ok",
-    summary: "Best initial wedge: paid pilots with mid-market manufacturers that already capture machine data.",
+    summary: "Best initial wedge: portable screening for environmental labs and utilities with urgent sampling needs.",
   },
   {
     agent: "Competitor and Risk Agent",
     status: "ok",
-    summary: "Key risks include slow industrial buying cycles, false positives, and integration friction.",
+    summary: "Key risks include accuracy validation, sample variability, regulatory credibility, and procurement proof.",
   },
   {
     agent: "Synthesis Critic Agent",
     status: "ok",
-    summary: "Memo is venture-legible but needs proof of willingness to pay and live deployment evidence.",
+    summary: "Memo is venture-legible but needs third-party validation, buyer interviews, and pilot economics.",
   },
 ];
 
@@ -86,91 +86,91 @@ const processingAgents = [
 const demoResponse = {
   sessionId: "SE-DEMO-A71C",
   memo: {
-    title: "Low-latency Edge Inference for Industrial Sensor Anomaly Detection",
-    oneLineCompany: "An edge AI monitoring layer that helps factories detect machine failures before downtime.",
+    title: "Low-cost Microplastic Detection Using Optical Sensors and Edge Inference",
+    oneLineCompany: "A portable microplastic screening platform for water-quality teams that need faster field evidence.",
     problem:
-      "Factories lose production time when vibration, temperature, and acoustic sensor anomalies are noticed after a machine has already drifted out of tolerance.",
+      "Water-quality teams lack fast, low-cost tools for detecting microplastic contamination outside specialized labs.",
     targetCustomer:
-      "Maintenance and operations leaders at mid-market discrete manufacturers with high-value production lines and limited in-house data science capacity.",
+      "Environmental testing labs, municipal water utilities, and industrial wastewater operators that need faster screening before full lab confirmation.",
     initialWedge:
-      "Start with retrofit anomaly detection for CNC machines and packaging lines, where downtime costs are visible and sensor streams are already available.",
+      "Start with portable screening for high-risk facilities before expanding into continuous monitoring.",
     whyNow:
-      "Lower-cost edge accelerators, reliable industrial gateways, and pressure to increase uptime make on-premise inference practical without sending sensitive factory data to cloud services.",
+      "Regulatory scrutiny, public pressure on water quality, and cheaper optical sensing hardware make field screening more urgent and practical.",
     technicalNovelty:
-      "The paper combines compressed temporal models with adaptive thresholds that run on low-power edge gateways while preserving early-warning accuracy.",
+      "The paper combines low-cost optical sensing with edge inference to classify microplastic signatures without relying on centralized lab equipment.",
     technicalMoat:
-      "A defensible product could emerge from deployment data, per-machine calibration recipes, and integrations with industrial maintenance workflows.",
+      "A defensible product could emerge from field datasets, sensor calibration workflows, detection models, and integrations into reporting pipelines.",
     productConcept:
-      "A plug-in monitoring service that ingests existing sensor feeds, runs low-latency edge inference, and surfaces ranked failure risks with recommended maintenance actions.",
+      "A portable screening device and analysis workflow that helps operators detect likely contamination events, prioritize samples, and prepare lab follow-up.",
     businessModel:
-      "Annual subscription per monitored production line, with paid onboarding for sensor mapping, threshold calibration, and maintenance-system integration.",
+      "Hardware-enabled subscription for testing labs and utilities, with paid validation support, reporting templates, and calibration updates.",
     competitors: [
       {
-        name: "Cloud predictive maintenance platforms",
-        whyRelevant: "They already sell anomaly detection and asset monitoring to factories.",
-        differentiation: "Spinout can emphasize low-latency local inference, easier retrofit, and reduced data-sharing concerns.",
+        name: "Lab-grade spectroscopy providers",
+        whyRelevant: "They offer trusted detection workflows for precise contamination analysis.",
+        differentiation: "Spinout can focus on faster field screening before expensive confirmatory lab work.",
       },
       {
-        name: "Industrial IoT gateway vendors",
-        whyRelevant: "Gateways can bundle analytics close to machines.",
-        differentiation: "Focus on model quality, fast deployment, and operator-facing workflow rather than generic connectivity.",
+        name: "Water-quality monitoring vendors",
+        whyRelevant: "They already sell instrumentation and reporting tools to utilities and industrial operators.",
+        differentiation: "Focus on microplastic-specific screening, calibration, and reporting evidence.",
       },
     ],
     milestones: {
       "30days": [
-        "Interview 12 plant maintenance leaders and quantify downtime cost by line type.",
-        "Build a clickable workflow around alerts, evidence, and maintenance handoff.",
+        "Interview 12 environmental testing labs and municipal water teams about current microplastic workflows.",
+        "Define the minimum report that makes field screening useful before lab confirmation.",
       ],
       "60days": [
-        "Pilot edge inference on historical sensor data from one design partner.",
-        "Define paid pilot scope and security requirements.",
+        "Run a pilot with 2-3 testing labs using known contaminated samples.",
+        "Compare edge inference results against lab-grade methods across different water conditions.",
       ],
       "90days": [
-        "Deploy to one live production line with human-in-the-loop alert review.",
-        "Convert pilot results into a repeatable wedge for a second factory segment.",
+        "Package the portable screening workflow for one high-risk facility segment.",
+        "Convert validation data into sponsor-ready evidence for utilities and industrial operators.",
       ],
     },
     risks: [
       {
-        risk: "Models may not generalize across machine types or plant conditions.",
+        risk: "Accuracy may not hold across different water conditions and particle types.",
         severity: "high",
-        mitigation: "Start with one narrow machine class and build calibration tooling.",
+        mitigation: "Validate against lab-grade methods and start with tightly defined sample conditions.",
       },
       {
-        risk: "False positives could erode operator trust.",
+        risk: "Regulatory buyers may not trust a screening workflow without third-party validation.",
         severity: "high",
-        mitigation: "Expose evidence, confidence, and feedback loops before automation.",
+        mitigation: "Use independent lab comparisons and clear reporting language for screening versus confirmation.",
       },
       {
-        risk: "Industrial sales cycles can be slow.",
+        risk: "Testing labs may resist workflow changes if the tool does not save measurable time.",
         severity: "medium",
-        mitigation: "Sell paid pilots around measurable downtime reduction.",
+        mitigation: "Measure turnaround time, cost per screened sample, and avoided unnecessary lab work.",
       },
     ],
     missingEvidence: [
-      "Proof that the model sustains accuracy on live, noisy factory data.",
-      "Measured willingness to pay for mid-market plants.",
-      "Integration requirements for common industrial gateways and CMMS tools.",
+      "Accuracy validation against lab-grade methods across different water conditions.",
+      "Measured willingness to pay from environmental labs and municipal utilities.",
+      "Evidence that field screening changes sample prioritization or reporting speed.",
     ],
     investorQuestions: [
-      "What specific machine type gives you the fastest paid pilot and why?",
-      "How much downtime must you prevent to justify your annual subscription?",
-      "What proprietary data advantage compounds after the first ten deployments?",
-      "How will you keep false positives low enough for operators to trust alerts?",
-      "Which incumbent will customers compare you against during procurement?",
+      "Which first customer has the most urgent reason to pay for portable screening?",
+      "How will you validate accuracy against lab-grade methods across different water conditions?",
+      "What proprietary data advantage compounds after the first ten pilots?",
+      "Where does this fit into the buyer's existing sample collection and reporting workflow?",
+      "Which incumbent instrument or lab service will customers compare you against?",
     ],
     pitch60s:
-      "Industrial plants already collect sensor data, but many still discover machine failures too late. Spinout Engine's demo company turns low-latency edge inference research into a monitoring layer for factories. It runs anomaly detection on local gateways, keeps sensitive data on site, and gives maintenance teams early warnings before downtime.",
+      "Water-quality teams need faster evidence when microplastic contamination is suspected, but lab-grade detection can be slow and expensive. This spinout turns low-cost optical sensing and edge inference into a portable screening workflow for labs, utilities, and industrial wastewater operators. The wedge is field screening for high-risk facilities before expansion into continuous monitoring.",
     confidence: 78,
   },
   evidence: [
     {
       source: "mock-paper:abstract",
-      excerpt: "Compressed temporal inference on edge gateways detected early anomalies with sub-second latency in industrial sensor streams.",
+      excerpt: "Low-cost optical sensors paired with edge inference detected microplastic signatures in controlled water samples.",
     },
     {
       source: "mock-paper:conclusion",
-      excerpt: "Future work should validate robustness across machine classes and live factory noise conditions.",
+      excerpt: "Future work should validate detection performance across varied water conditions and compare results with lab-grade methods.",
     },
   ],
   agentTraces: fallbackAgents,
@@ -223,9 +223,22 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function resetViewportScroll() {
+  requestAnimationFrame(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  });
+}
+
+function scrollEvaluationIntoView() {
+  requestAnimationFrame(() => {
+    document.querySelector(".evaluation")?.scrollIntoView({ block: "start", behavior: "smooth" });
+  });
+}
+
 function setScreen(screen) {
   state.screen = screen;
   render();
+  resetViewportScroll();
 }
 
 function toast(message) {
@@ -373,29 +386,39 @@ function renderLanding() {
     </header>
     <section class="hero">
       <div class="hero-copy">
-        <h1>Spinout<br><span>Engine</span></h1>
-        <p>Turn research papers into venture-ready memos, then stress-test the pitch with a synthetic AI investor.</p>
+        <h1>Find the startup hiding inside your research.</h1>
+        <p>Spinout Engine screens papers, decks, and technical notes, then turns them into venture-ready memos with customer hypotheses, wedge analysis, risk breakdowns, milestones, and investor-style objections.</p>
         <div class="hero-actions">
           <button class="btn primary" data-action="go-upload">${iconUpload()}Upload paper</button>
-          <button class="btn" data-action="start-demo">Try demo paper ${iconArrow()}</button>
+          <button class="btn" data-action="start-demo">Try demo report ${iconArrow()}</button>
         </div>
+        <p class="hero-support">Built for tech-transfer teams, deep-tech founders, accelerators, venture studios, and research sponsors.</p>
       </div>
       <div class="hero-visual">
         <div class="paper-preview">
           <div class="preview-page">
-            <div class="preview-line primary short"></div>
-            <div class="preview-line"></div>
-            <div class="preview-line"></div>
-            <div class="preview-line tiny"></div>
-            <div class="agent-stack">
-              <div class="mini-agent">Intake</div>
-              <div class="mini-agent">Novelty</div>
-              <div class="mini-agent">Market</div>
-              <div class="mini-agent">Critic</div>
-            </div>
+            <div class="section-label">Demo report</div>
             <div class="card feature">
               <div class="memo-heading">Company idea</div>
-              <div class="memo-title">Edge AI monitoring for factories with local low-latency inference.</div>
+              <div class="memo-title">Solid-state battery diagnostics platform for EV and grid-storage manufacturers.</div>
+            </div>
+            <div class="demo-score-grid">
+              <div><span>Venture readiness</span><strong>78</strong></div>
+              <div><span>Evidence strength</span><strong>64</strong></div>
+              <div><span>Market urgency</span><strong>82</strong></div>
+              <div><span>Defensibility</span><strong>71</strong></div>
+            </div>
+            <div class="demo-risk-row">
+              <span>Validation risk</span>
+              <strong>High</strong>
+            </div>
+            <div class="demo-note">
+              <span>Suggested next milestone</span>
+              <strong>Validate performance on third-party cell data.</strong>
+            </div>
+            <div class="demo-mini-row">
+              <span><strong>4</strong> investor objections</span>
+              <span><strong>5</strong> priority risks</span>
             </div>
           </div>
         </div>
@@ -403,49 +426,117 @@ function renderLanding() {
     </section>
     <section class="stats-strip" aria-label="Demo metrics">
       <div class="stat-item">
-        <strong>5</strong>
-        <span>AI agents</span>
-      </div>
-      <div class="stat-divider"></div>
-      <div class="stat-item">
         <strong>78</strong>
-        <span>Readiness score</span>
+        <span>Venture readiness</span>
       </div>
       <div class="stat-divider"></div>
       <div class="stat-item">
-        <strong>4</strong>
-        <span>Investor Q&amp;As</span>
+        <strong>64</strong>
+        <span>Evidence strength</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-item">
+        <strong>High</strong>
+        <span>Validation risk</span>
       </div>
     </section>
     <section id="about" class="landing-section about-section">
       <div class="section-kicker">About</div>
       <div class="section-heading">
-        <h2>Commercialize research before the opportunity gets lost.</h2>
-        <p>Spinout Engine translates dense technical material into the questions founders, sponsors, and investors actually need answered.</p>
+        <h2>Commercialize research before the opportunity gets buried.</h2>
+        <p>Promising research often gets lost between technical novelty, unclear customers, weak positioning, and missing business evidence. Spinout Engine translates dense technical material into the questions founders, sponsors, and investors actually need answered.</p>
       </div>
       <div class="about-grid">
         <article class="about-item">
           <span>01</span>
           <h3>Research intake</h3>
-          <p>Upload a paper, deck, or technical note and extract the claims, novelty, evidence, and limitations that matter for company formation.</p>
+          <p>Upload a paper, technical note, grant draft, or internal deck. Spinout Engine extracts claims, novelty, evidence, assumptions, limitations, and potential commercialization paths.</p>
         </article>
         <article class="about-item">
           <span>02</span>
           <h3>Venture memo</h3>
-          <p>Turn technical output into a clear problem, first customer, wedge, moat, risks, competitors, and missing evidence.</p>
+          <p>Get a structured memo covering the problem, first customer, wedge, moat, competitors, business model, risks, missing evidence, and recommended next milestones.</p>
         </article>
         <article class="about-item">
           <span>03</span>
-          <h3>Investor readiness</h3>
-          <p>Practice the questions that expose weak assumptions before the next sponsor review, accelerator screen, or investor meeting.</p>
+          <h3>Investor stress-test</h3>
+          <p>Practice the questions that expose weak assumptions before a sponsor review, accelerator screen, grant panel, or investor meeting.</p>
         </article>
+      </div>
+    </section>
+    <section class="landing-section feature-section">
+      <div class="section-kicker">What you get</div>
+      <div class="section-heading">
+        <h2>Outputs built for spinout decisions.</h2>
+        <p>Move from technical promise to the specific commercial questions that determine whether an opportunity deserves more time.</p>
+      </div>
+      <div class="feature-grid">
+        <article class="landing-card">
+          <h3>Problem framing</h3>
+          <p>Turn technical claims into a clear commercial problem.</p>
+        </article>
+        <article class="landing-card">
+          <h3>First customer hypothesis</h3>
+          <p>Identify who might pay first, why now, and what workflow the product enters.</p>
+        </article>
+        <article class="landing-card">
+          <h3>Wedge strategy</h3>
+          <p>Find the narrow entry point that makes the company believable.</p>
+        </article>
+        <article class="landing-card">
+          <h3>Moat and defensibility</h3>
+          <p>Map what could become proprietary: data, workflow, IP, model, distribution, or domain expertise.</p>
+        </article>
+        <article class="landing-card">
+          <h3>Risk breakdown</h3>
+          <p>Separate technical, market, regulatory, adoption, and funding risks.</p>
+        </article>
+        <article class="landing-card">
+          <h3>Milestone roadmap</h3>
+          <p>Generate 30/90/180-day validation steps before investing more time.</p>
+        </article>
+      </div>
+    </section>
+    <section class="landing-section output-section">
+      <div class="section-kicker">Example output</div>
+      <div class="output-panel">
+        <div class="output-input">
+          <span class="section-label">Input</span>
+          <h2>Paper: Low-cost microplastic detection using optical sensors and edge inference.</h2>
+        </div>
+        <div class="output-grid">
+          <article>
+            <span>Problem</span>
+            <p>Water-quality teams lack fast, low-cost tools for detecting microplastic contamination outside specialized labs.</p>
+          </article>
+          <article>
+            <span>First customer</span>
+            <p>Environmental testing labs, municipal water utilities, and industrial wastewater operators.</p>
+          </article>
+          <article>
+            <span>Wedge</span>
+            <p>Start with portable screening for high-risk facilities before expanding into continuous monitoring.</p>
+          </article>
+          <article>
+            <span>Moat</span>
+            <p>Field dataset, sensor calibration workflow, detection model, and integration into reporting pipelines.</p>
+          </article>
+          <article>
+            <span>Main risk</span>
+            <p>Accuracy must be validated against lab-grade methods across different water conditions.</p>
+          </article>
+          <article>
+            <span>Next milestone</span>
+            <p>Run a pilot with 2-3 testing labs using known contaminated samples.</p>
+          </article>
+        </div>
       </div>
     </section>
     <section id="pricing" class="landing-section pricing-section">
       <div class="section-kicker">Pricing</div>
       <div class="section-heading">
-        <h2>Choose the right depth of venture analysis.</h2>
-        <p>Start with a limited research-to-memo trial, then scale into investor practice, exports, team review, and sponsor-ready portfolio analysis. Plan limits are positioning copy in this demo.</p>
+        <h2>Choose the right depth of commercialization review.</h2>
+        <p>Start with a limited memo preview, then scale into saved history, team workspaces, sponsor-ready reports, and portfolio review.</p>
       </div>
       <div class="pricing-grid">
         <article class="pricing-card">
@@ -453,54 +544,116 @@ function renderLanding() {
             <h3>Free</h3>
             <div class="plan-price">$0</div>
           </div>
-          <p class="plan-audience">For visitors testing the concept.</p>
+          <p class="plan-audience">For testing the concept.</p>
           <ul>
             <li>2 paper analyses total</li>
-            <li>Upload PDF, DOCX, TXT, or MD files</li>
-            <li>Venture memo preview</li>
-            <li>Readiness score snapshot</li>
-            <li>Investor Room not included</li>
-            <li>Full exports not included</li>
+            <li>Memo preview</li>
+            <li>Readiness snapshot</li>
+            <li>Demo investor questions</li>
+            <li>No exports</li>
+            <li>No saved history</li>
           </ul>
           <button class="btn primary full" data-action="go-upload">Start free</button>
+        </article>
+        <article class="pricing-card">
+          <div class="plan-top">
+            <h3>Starter</h3>
+            <div class="plan-price">$39<span>/mo</span></div>
+          </div>
+          <p class="plan-audience">For solo founders, PhD students, and early spinout teams.</p>
+          <ul>
+            <li>25 analyses per month</li>
+            <li>Full venture memo</li>
+            <li>Readiness score with risk breakdown</li>
+            <li>Text Investor Room Q&amp;A</li>
+            <li>Markdown export</li>
+            <li>Saved project history</li>
+            <li>Basic competitor prompts</li>
+          </ul>
+          <button class="btn primary full" data-action="open-auth-modal">Choose Starter</button>
         </article>
         <article class="pricing-card highlighted">
           <div class="plan-badge">Most useful</div>
           <div class="plan-top">
-            <h3>Starter</h3>
-            <div class="plan-price">$29<span>/mo</span></div>
+            <h3>Team</h3>
+            <div class="plan-price">$149<span>/mo</span></div>
           </div>
-          <p class="plan-audience">For solo founders and early spinout teams.</p>
+          <p class="plan-audience">For labs, startup teams, and accelerator cohorts.</p>
           <ul>
-            <li>30 paper analyses per month</li>
-            <li>Full AI-generated venture memo</li>
-            <li>Text Investor Room Q&amp;A practice</li>
-            <li>Readiness score with risk breakdown</li>
+            <li>100 analyses per month</li>
+            <li>Multi-document project analysis</li>
+            <li>PDF export</li>
+            <li>Shared workspace for 3 seats</li>
+            <li>Investor personas: VC, grant reviewer, sponsor</li>
             <li>Competitor and wedge deep-dive</li>
-            <li>Markdown and PDF export</li>
-            <li>Saved project history</li>
+            <li>Milestone roadmap</li>
+            <li>Priority processing</li>
           </ul>
-          <button class="btn primary full" data-action="open-auth-modal">Choose Starter</button>
+          <button class="btn primary full" data-action="open-auth-modal">Choose Team</button>
         </article>
         <article class="pricing-card">
           <div class="plan-top">
-            <h3>Premium</h3>
-            <div class="plan-price">$99<span>/mo</span></div>
+            <h3>Premium / Studio</h3>
+            <div class="plan-price">$499<span>/mo</span></div>
           </div>
-          <p class="plan-audience">For teams, studios, accelerators, and sponsor reviews.</p>
+          <p class="plan-audience">For tech-transfer offices, venture studios, and sponsor reviews.</p>
           <ul>
-            <li>100+ analyses per month</li>
-            <li>Multi-document analysis per project</li>
-            <li>Investor personas for VC, sponsor, and grant review</li>
-            <li>Audio-enabled Investor Room when configured</li>
+            <li>500 analyses per month</li>
+            <li>Portfolio dashboard</li>
+            <li>Compare spinout opportunities across projects</li>
+            <li>Custom scoring rubric</li>
             <li>Sponsor-ready PDF reports</li>
-            <li>Team workspace for 3-5 seats</li>
-            <li>Portfolio dashboard for comparing spinout ideas</li>
-            <li>Custom scoring rubric and priority processing</li>
+            <li>Team workspace for 10 seats</li>
+            <li>Audio-enabled Investor Room when configured</li>
+            <li>Exportable portfolio review summaries</li>
           </ul>
-          <button class="btn primary full" data-action="open-auth-modal">Go Premium</button>
+          <button class="btn primary full" data-action="open-auth-modal">Choose Studio</button>
+        </article>
+        <article class="pricing-card">
+          <div class="plan-top">
+            <h3>Enterprise</h3>
+            <div class="plan-price custom-price">Custom</div>
+          </div>
+          <p class="plan-audience">For universities, research institutes, and corporate R&amp;D.</p>
+          <ul>
+            <li>Custom analysis volume</li>
+            <li>SSO</li>
+            <li>Dedicated workspace</li>
+            <li>Custom report templates</li>
+            <li>Internal review workflows</li>
+            <li>Admin dashboard</li>
+            <li>Security review support</li>
+            <li>Annual contract</li>
+          </ul>
+          <button class="btn primary full" data-action="open-auth-modal">Contact sales</button>
         </article>
       </div>
+    </section>
+    <section class="landing-section built-section">
+      <div class="section-kicker">Built for</div>
+      <div class="built-grid">
+        <article class="landing-card">
+          <h3>Tech-transfer offices</h3>
+          <p>Screen research outputs and identify the strongest spinout candidates.</p>
+        </article>
+        <article class="landing-card">
+          <h3>Deep-tech founders</h3>
+          <p>Turn technical work into a clearer company narrative before pitching.</p>
+        </article>
+        <article class="landing-card">
+          <h3>Venture studios</h3>
+          <p>Compare early opportunities and prioritize the ones worth validating.</p>
+        </article>
+        <article class="landing-card">
+          <h3>Accelerators and grant programs</h3>
+          <p>Help teams prepare stronger sponsor, grant, and investor reviews.</p>
+        </article>
+      </div>
+    </section>
+    <section class="landing-section final-cta">
+      <h2>Stop guessing which research is venture-ready.</h2>
+      <p>Upload technical material, generate a structured commercialization memo, and stress-test the idea before spending months on the wrong opportunity.</p>
+      <button class="btn primary" data-action="start-demo">Try demo report ${iconArrow()}</button>
     </section>
     <footer class="landing-footer">
       <div class="footer-inner">
@@ -508,7 +661,7 @@ function renderLanding() {
           <div class="brand-mark small">${iconSpark(13)}</div>
           <span class="footer-name">Spinout Engine</span>
         </div>
-        <p class="footer-tagline">From research paper to venture-ready pitch in seconds.</p>
+        <p class="footer-tagline">Research commercialization memos for spinout decisions.</p>
         <div class="footer-meta">
           <a href="#privacy-policy">Privacy Policy</a>
           <a href="#refund-policy">Refund Policy</a>
@@ -565,8 +718,8 @@ function renderUpload() {
       <span></span>
     </header>
     <section class="center-wrap">
-      <h1 class="screen-title">Upload your paper</h1>
-      <p class="muted">5 AI agents will analyze it and build a venture memo in less than 30 seconds.</p>
+      <h1 class="screen-title">Upload technical material</h1>
+      <p class="muted">Screen a paper, deck, note, or draft and build a venture memo for commercialization review.</p>
       <input id="file-input" class="hidden" type="file" accept=".pdf,.txt,.md,.docx">
       <div class="dropzone ${state.dragging ? "dragging" : ""}" data-action="browse-file">
         <div>
@@ -583,11 +736,11 @@ function renderUpload() {
       </div>
       <div class="button-stack">
         <button class="btn primary full" data-action="analyze-file">Analyze paper ${iconArrow()}</button>
-        <button class="btn full" data-action="start-demo">Use demo paper (edge AI research)</button>
+        <button class="btn full" data-action="start-demo">Use demo report (microplastic detection)</button>
       </div>
       <div class="card note">
         <span class="status-dot"></span>
-        <span>Files are sent to the configured Spinout Engine API. Upload errors are shown directly so you can fix the backend or file.</span>
+        <span>Files are sent to the configured Spinout Engine API. Upload errors are shown directly so the backend or file can be fixed.</span>
       </div>
     </section>
   </main>`;
@@ -601,8 +754,8 @@ function renderAnalysis() {
       <span class="chip"><span class="status-dot pulse"></span> Processing - ${escapeHtml(currentSessionId())}</span>
     </header>
     <section class="analysis-wrap">
-      <h1 class="screen-title">Analyzing research paper</h1>
-      <p class="muted">5 AI agents running in parallel</p>
+      <h1 class="screen-title">Screening technical material</h1>
+      <p class="muted">Commercialization analysis running in parallel</p>
       <div class="progress-track"><div class="progress-fill" style="width:${percent}%"></div></div>
       <p class="muted">${state.analysisProgress} of ${pipelineSteps.length} steps complete <span style="float:right;color:var(--primary);font-weight:700">${percent}%</span></p>
       <div class="analysis-grid">
@@ -1063,6 +1216,7 @@ async function startAnalysis(useFile) {
   const request = useFile ? analyzeFile(state.file) : analyzeDemo().catch(() => demoResponse);
   state.analysisPromise = request;
   render();
+  resetViewportScroll();
   runPipeline();
 }
 
@@ -1117,6 +1271,7 @@ async function runPipeline() {
     rememberCurrentAnalysis();
   }
   render();
+  resetViewportScroll();
 }
 
 function setPipelineProgress(progress) {
@@ -1175,6 +1330,7 @@ async function analyzeFile(file) {
 async function enterInvestorRoom() {
   state.screen = "investor";
   render();
+  resetViewportScroll();
   if (state.currentAudio?.url || state.currentAudio?.base64) {
     await playInvestorAudio(state.currentAudio);
     return;
@@ -1301,6 +1457,7 @@ async function submitAnswer() {
   }
   state.evalHistory.push({ question, answer, score: state.evaluation.score });
   render();
+  scrollEvaluationIntoView();
 }
 
 function localEvaluation(answer) {

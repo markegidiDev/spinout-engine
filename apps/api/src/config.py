@@ -1,12 +1,17 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+API_DIR = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(REPO_ROOT / ".env", API_DIR / ".env"),
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",
@@ -33,7 +38,7 @@ class Settings(BaseSettings):
 
     S3_ENDPOINT: str = "https://s3.fr-par.scw.cloud"
     S3_REGION: str = "fr-par"
-    S3_BUCKET: str = "spinout-engine-demo"
+    S3_BUCKET: str = ""
     S3_ACCESS_KEY: str = ""
     S3_SECRET_KEY: str = ""
 

@@ -1,6 +1,7 @@
 const API_BASE =
   new URLSearchParams(window.location.search).get("api") ||
-  "https://spinoutengineapi722de514-spinout-engine-api.functions.fnc.fr-par.scw.cloud";
+  window.SPINOUT_API_BASE ||
+  "http://localhost:8080";
 
 const firebaseConfig = window.SPINOUT_FIREBASE_CONFIG || {
   apiKey: "",
@@ -315,7 +316,7 @@ function topbar(active, options = {}) {
   const steps = ["Memo", "Investor Room", "Final Pitch"];
   const userBtn = state.isAuthenticated
     ? `<span class="avatar-chip" title="${escapeHtml(state.userEmail)}">${escapeHtml((state.userEmail || "S").slice(0, 1).toUpperCase())}</span>`
-    : `<button class="btn compact" data-action="open-auth-modal">Accedi</button>`;
+    : `<button class="btn compact" data-action="open-auth-modal">Log in</button>`;
   return html`<header class="topbar">
     <div class="brand-wrap">
       ${brand(true)}
@@ -359,8 +360,8 @@ function renderLanding() {
       ${brand()}
       <div class="landing-actions">
         ${state.isAuthenticated
-          ? `<span class="chip primary">${escapeHtml(state.userEmail || "Workspace")}</span><button class="btn compact" data-action="logout">Esci</button>`
-          : `<button class="btn compact" data-action="open-auth-modal">Accedi</button><button class="btn compact primary" data-action="open-auth-modal">Registrati</button>`}
+          ? `<span class="chip primary">${escapeHtml(state.userEmail || "Workspace")}</span><button class="btn compact" data-action="logout">Log out</button>`
+          : `<button class="btn compact" data-action="open-auth-modal">Log in</button><button class="btn compact primary" data-action="open-auth-modal">Sign up</button>`}
       </div>
     </header>
     <section class="hero">
@@ -850,15 +851,15 @@ function iconLogout() {
 function renderAuthModal() {
   if (!state.authModalOpen) return "";
   const isRegister = state.authMode === "register";
-  const buttonLabel = state.authLoading ? "Caricamento..." : isRegister ? "Crea account" : "Accedi";
+  const buttonLabel = state.authLoading ? "Working..." : isRegister ? "Create account" : "Log in";
   return html`<div class="auth-modal-backdrop" data-action="close-auth-modal">
     <div class="auth-modal-card" data-action="">
       <div class="auth-modal-header">
         <div>
-          <div class="section-label">${isRegister ? "Registrazione" : "Login"}</div>
-          <strong>${isRegister ? "Crea il tuo workspace" : "Bentornato"}</strong>
+          <div class="section-label">${isRegister ? "Sign Up" : "Login"}</div>
+          <strong>${isRegister ? "Create your workspace" : "Welcome back"}</strong>
         </div>
-        <button class="modal-close" data-action="close-auth-modal" aria-label="Chiudi">
+        <button class="modal-close" data-action="close-auth-modal" aria-label="Close">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
             <path d="M1 1l12 12M13 1 1 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
@@ -870,7 +871,7 @@ function renderAuthModal() {
       </div>
       ${state.authError ? `<p class="auth-error">${escapeHtml(state.authError)}</p>` : ""}
       <button class="btn primary full" data-action="${isRegister ? "register" : "login"}" ${state.authLoading ? "disabled" : ""}>${state.authLoading ? '<span class="spinner-sm"></span> ' : ""}${buttonLabel}</button>
-      <button class="auth-switch-btn" data-action="toggle-auth">${isRegister ? "Hai già un account? Accedi" : "Non hai un account? Registrati"}</button>
+      <button class="auth-switch-btn" data-action="toggle-auth">${isRegister ? "Already have an account? Log in" : "Need an account? Sign up"}</button>
     </div>
   </div>`;
 }
@@ -921,7 +922,7 @@ function renderSidebar(content) {
       <div class="sidebar-user">
         <span class="avatar-mini">${escapeHtml((state.userEmail || "S").slice(0, 1).toUpperCase())}</span>
         <span class="sidebar-email">${escapeHtml(state.userEmail || "Workspace")}</span>
-        ${state.sidebarOpen ? `<button class="sidebar-logout" data-action="logout" title="Esci">${iconLogout()}</button>` : ""}
+        ${state.sidebarOpen ? `<button class="sidebar-logout" data-action="logout" title="Log out">${iconLogout()}</button>` : ""}
       </div>
     </aside>
     <div class="workspace-main">${content}</div>
@@ -1259,21 +1260,21 @@ function authFormValues() {
 
 function friendlyFirebaseError(error) {
   const code = error?.code || "";
-  if (code.includes("auth/invalid-email")) return "Email non valida.";
-  if (code.includes("auth/missing-password")) return "Inserisci la password.";
-  if (code.includes("auth/weak-password")) return "La password deve avere almeno 6 caratteri.";
-  if (code.includes("auth/email-already-in-use")) return "Esiste gia un account con questa email.";
+  if (code.includes("auth/invalid-email")) return "Invalid email address.";
+  if (code.includes("auth/missing-password")) return "Enter your password.";
+  if (code.includes("auth/weak-password")) return "The password must be at least 6 characters.";
+  if (code.includes("auth/email-already-in-use")) return "An account already exists for this email.";
   if (code.includes("auth/user-not-found") || code.includes("auth/wrong-password") || code.includes("auth/invalid-credential")) {
-    return "Email o password non corrette.";
+    return "Email or password is incorrect.";
   }
-  if (code.includes("auth/operation-not-allowed")) return "Abilita Email/Password in Firebase Authentication.";
-  if (code.includes("auth/unauthorized-domain")) return "Aggiungi questo dominio agli authorized domains di Firebase.";
-  return error?.message || "Errore Firebase Auth.";
+  if (code.includes("auth/operation-not-allowed")) return "Enable Email/Password in Firebase Authentication.";
+  if (code.includes("auth/unauthorized-domain")) return "Add this domain to Firebase authorized domains.";
+  return error?.message || "Firebase Auth error.";
 }
 
 async function handleAuthAction(action) {
   if (!firebaseAuth) {
-    state.authError = firebaseInitError || "Firebase Auth non configurato.";
+    state.authError = firebaseInitError || "Firebase Auth is not configured.";
     toast(state.authError);
     render();
     return;
@@ -1281,7 +1282,7 @@ async function handleAuthAction(action) {
 
   const { email, password } = authFormValues();
   if (!email || !password) {
-    state.authError = "Inserisci email e password.";
+    state.authError = "Enter email and password.";
     render();
     return;
   }
@@ -1300,7 +1301,7 @@ async function handleAuthAction(action) {
     state.userEmail = credential.user?.email || email;
     state.authModalOpen = false;
     state.screen = "upload";
-    toast(action === "register" ? "Account creato" : "Login effettuato");
+    toast(action === "register" ? "Account created" : "Logged in");
   } catch (error) {
     state.authError = friendlyFirebaseError(error);
     toast(state.authError);

@@ -1,58 +1,58 @@
 # Spinout Engine
 
-Spinout Engine prende un paper, una nota tecnica o un deck e lo trasforma in un memo da startup: problema, cliente, wedge iniziale, rischi, concorrenza e domande da investitore. Dopo il memo c'è anche una piccola "Investor Room", dove un investitore AI fa domande e valuta le risposte del founder.
+Spinout Engine turns a research paper, technical note, or deck into a startup memo: problem, customer, first wedge, risks, competitors, and investor questions. After the memo, the app opens a lightweight Investor Room where an AI investor asks questions and scores the founder's answers.
 
-Il progetto è diviso in due parti:
+The repo has two apps:
 
-- `apps/api`: API backend in Python/FastAPI
-- `apps/web`: frontend statico in HTML, CSS e JavaScript vanilla
+- `apps/api`: Python/FastAPI backend
+- `apps/web`: static HTML, CSS, and vanilla JavaScript frontend
 
-La demo può girare anche senza chiavi API esterne: in quel caso usa dati finti ma completi, utili per testare il flusso end-to-end.
+The demo can run without external API keys. In that mode it returns complete fixture data, which is useful for testing the full flow quickly.
 
 ## Stack
 
 Backend:
 
 - FastAPI + Uvicorn
-- Pydantic per config e schema dei payload
-- OpenAI API per gli agenti principali
-- Gemini come reviewer opzionale
-- ElevenLabs per la voce dell'investitore, opzionale
-- `boto3` con Scaleway Object Storage, compatibile S3
-- Docker per deploy
+- Pydantic for config and payload schemas
+- OpenAI API for the main agent pipeline
+- Gemini as an optional reviewer
+- ElevenLabs for optional investor voice
+- Scaleway Object Storage through the S3-compatible API and `boto3`
 
 Frontend:
 
-- HTML/CSS/JavaScript senza build step
-- Firebase Auth opzionale
-- API configurabile via query string, utile per testare backend diversi
+- HTML/CSS/JavaScript with no build framework
+- Optional Firebase Auth
+- API URL configurable through `apps/web/env.js` or the `?api=` query string
 
-Infra pensata per la demo:
+Deployment target:
 
-- API deployabile su Scaleway Serverless Containers
-- immagini Docker pubblicabili su GitHub Container Registry
-- file caricati, memo e audio salvabili su Scaleway Object Storage
+- frontend on Vercel
+- FastAPI backend on Vercel
+- private bucket on Scaleway Object Storage
 
-## Avvio locale
+## Local Setup
 
 ### Backend
+
+The backend reads environment variables from the root `.env` file and, if present, from `apps/api/.env`.
 
 ```bash
 cd apps/api
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
-copy .env.example .env
 uvicorn src.main:app --host 0.0.0.0 --port 8080
 ```
 
-Su macOS/Linux cambia solo l'attivazione del virtualenv:
+On macOS/Linux, activate the virtualenv with:
 
 ```bash
 source .venv/bin/activate
 ```
 
-Test rapido:
+Quick smoke test:
 
 ```bash
 curl http://localhost:8080/health
@@ -63,93 +63,129 @@ curl -X POST http://localhost:8080/demo/analyze
 
 ```bash
 cd apps/web
+copy env.example.js env.js
 node dev-server.cjs 3000
 ```
 
-Poi apri:
+Then open:
 
 ```text
 http://localhost:3000
 ```
 
-Di default il frontend usa l'API Scaleway già impostata in `apps/web/app.js`. Per puntarlo al backend locale:
+The frontend reads `window.SPINOUT_API_BASE` from `apps/web/env.js`. You can also override the API URL on the fly:
 
 ```text
 http://localhost:3000/?api=http://localhost:8080
 ```
 
-## Configurazione
+## Scaleway Object Storage
 
-Il template è qui:
+Create a private bucket, for example:
+
+```text
+spinout-engine-prod
+```
+
+You do not need to create folders manually. The backend writes objects using these prefixes:
+
+- `uploads/<session_id>/...`
+- `outputs/<session_id>/memo.json`
+- `outputs/<session_id>/memo.md`
+- `audio/<session_id>/question-1.mp3`
+
+The Scaleway key used by the backend needs read/write access to objects in that bucket. In practice, you need:
+
+- `S3_ACCESS_KEY`: access key
+- `S3_SECRET_KEY`: secret key
+
+The secret key is shown only once by Scaleway, so save it somewhere safe immediately.
+
+## Environment
+
+The backend example file is:
 
 ```text
 apps/api/.env.example
 ```
 
-Le variabili più importanti:
+Main variables:
 
-- `ALLOWED_ORIGINS`: origin del frontend, separate da virgola
-- `OPENAI_API_KEY`: necessaria per analizzare documenti reali
-- `OPENAI_BASE_URL`: opzionale, per endpoint OpenAI-compatible
-- `OPENAI_FALLBACK_API_KEY`: chiave OpenAI alternativa se il provider principale fallisce
-- `GEMINI_API_KEY`: reviewer opzionale
-- `ELEVENLABS_API_KEY` e `ELEVENLABS_VOICE_ID`: audio dell'investitore
-- `S3_*`: storage Scaleway/S3 per upload, output e MP3
-- `ENABLE_DEMO_FIXTURES=true`: mantiene attiva la demo anche senza provider AI
-- `SAVE_AUDIO_TO_S3=true`: salva gli MP3 su S3 quando lo storage è configurato
+- `ALLOWED_ORIGINS`: comma-separated frontend origins
+- `OPENAI_API_KEY`: required for real document analysis
+- `OPENAI_BASE_URL`: optional OpenAI-compatible endpoint
+- `OPENAI_FALLBACK_API_KEY`: fallback OpenAI key if the primary provider fails
+- `GEMINI_API_KEY`: optional reviewer
+- `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID`: optional investor audio
+- `S3_ENDPOINT=https://s3.fr-par.scw.cloud`
+- `S3_REGION=fr-par`
+- `S3_BUCKET`: Scaleway bucket name
+- `S3_ACCESS_KEY`: Scaleway access key
+- `S3_SECRET_KEY`: Scaleway secret key
+- `ENABLE_DEMO_FIXTURES=true`: keeps the demo usable even without AI providers
+- `SAVE_AUDIO_TO_S3=true`: stores generated MP3 files in Object Storage when configured
 
-Per Firebase Auth, copia `apps/web/env.example.js` in `apps/web/env.js` e inserisci la config del progetto Firebase. Se manca, l'app resta comunque usabile come demo.
+For Firebase Auth, copy `apps/web/env.example.js` to `apps/web/env.js` and fill in the Firebase project config. If it is missing, the app still works as a demo.
 
-## API principali
+Frontend environment variables for Vercel are listed in:
+
+```text
+apps/web/.env.example
+```
+
+## API Routes
 
 - `GET /health`
 - `POST /demo/analyze`
-- `POST /documents/analyze` con multipart field `file`
+- `POST /documents/analyze` with multipart field `file`
 - `POST /investor/question`
 - `POST /investor/answer`
 - `GET /sessions/{sessionId}`
 
-Formati accettati per upload: `.pdf`, `.txt`, `.md`, `.docx`.
-La dimensione massima si cambia con `MAX_UPLOAD_MB`.
+Accepted upload formats: `.pdf`, `.txt`, `.md`, `.docx`.
+The upload size is controlled by `MAX_UPLOAD_MB`.
+
+Vercel note: the backend runs as a Vercel Function. Keep production uploads below the platform payload limit; for this demo, set `MAX_UPLOAD_MB=4` on Vercel.
+
+## Vercel Deployment
+
+Use two Vercel projects.
+
+Backend project:
+
+- root directory: `apps/api`
+- framework preset: Other
+- entrypoint: `app.py`
+- environment variables: all backend variables from your `.env`
+- `ALLOWED_ORIGINS`: the final Vercel frontend URL
+
+Frontend project:
+
+- root directory: `apps/web`
+- build command: `node build-env.cjs`
+- output directory: `.`
+- environment variables: copy from `apps/web/.env.example`
+- minimum required variable:
+
+```text
+SPINOUT_API_BASE=https://your-api.vercel.app
+```
+
+The `VITE_FIREBASE_*` variables are optional. If you add them in Vercel, `build-env.cjs` generates `env.js` with the frontend config during deployment.
 
 ## Docker
 
-Build:
+The backend can still run as a container:
 
 ```bash
 docker build -t spinout-engine-api ./apps/api
+docker run --env-file ./.env -p 8080:8080 spinout-engine-api
 ```
 
-Run locale:
+## Security Notes
 
-```bash
-docker run --env-file ./apps/api/.env -p 8080:8080 spinout-engine-api
-```
-
-## Deploy
-
-Il flusso previsto è semplice:
-
-1. build dell'immagine Docker
-2. push su GitHub Container Registry
-3. deploy dell'immagine su Scaleway Serverless Containers
-4. configurazione delle env/secrets dalla `.env`
-5. `ALLOWED_ORIGINS` puntato al dominio del frontend
-
-Comandi base per GHCR:
-
-```bash
-docker tag spinout-engine-api ghcr.io/USERNAME/spinout-engine-api:latest
-echo GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
-docker push ghcr.io/USERNAME/spinout-engine-api:latest
-```
-
-Su Scaleway il container deve esporre la porta `8080` e avere HTTP pubblico abilitato.
-
-## Note di sicurezza
-
-- Non committare mai `.env` o `apps/web/env.js`
-- Il bucket S3/Scaleway deve restare privato
-- Gli audio vengono serviti con URL presigned
-- I nomi file caricati vengono sanitizzati
-- In produzione evita `ALLOWED_ORIGINS=*`
+- Never commit `.env` or `apps/web/env.js`
+- Keep the Scaleway bucket private
+- Investor audio is served through presigned URLs
+- Uploaded filenames are sanitized
+- Do not use `ALLOWED_ORIGINS=*` in production

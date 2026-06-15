@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     S3_SECRET_KEY: str = ""
 
     MAX_UPLOAD_MB: int = Field(default=20, ge=1, le=100)
-    ENABLE_DEMO_FIXTURES: bool = True
+    ENABLE_DEMO_FIXTURES: bool = False
     SAVE_AUDIO_TO_S3: bool = True
     REQUEST_TIMEOUT_SECONDS: int = Field(default=45, ge=5, le=120)
 

@@ -357,7 +357,23 @@ function currentMemo() {
 }
 
 function currentEvidence() {
-  return state.result?.evidence || demoResponse.evidence;
+  if (!state.result) return demoResponse.evidence;
+
+  const evidence = Array.isArray(state.result.evidence) ? state.result.evidence : [];
+  const expectedDocumentId = state.result.documentId || "";
+  const expectedSessionId = state.result.sessionId || "";
+
+  if (expectedDocumentId) {
+    return evidence.filter(
+      (item) => item.documentId === expectedDocumentId && (!item.sessionId || item.sessionId === expectedSessionId)
+    );
+  }
+
+  if (expectedSessionId) {
+    return evidence.filter((item) => !item.sessionId || item.sessionId === expectedSessionId);
+  }
+
+  return evidence;
 }
 
 function currentAgents() {
@@ -837,7 +853,7 @@ function renderDashboard() {
             </div>
           </div>
           <div class="meta-list">
-            <div><span class="muted">Session</span><strong>${escapeHtml(currentSessionId())}</strong></div>
+            <div><span class="muted">Session</span><strong style="font-family:monospace;font-size:11px">${escapeHtml(formatSessionId(currentSessionId()))}</strong></div>
             <div><span class="muted">Evidence</span><strong>${evidence.length} snippets</strong></div>
             <div><span class="muted">Agents</span><strong>${currentAgents().length} traces</strong></div>
           </div>
@@ -975,7 +991,7 @@ function evidenceSnippets(evidence) {
         evidence.length
           ? evidence
               .slice(0, 6)
-              .map((item) => `<div class="evidence-row"><span class="badge source-badge">${escapeHtml(item.source || "source")}</span><p>${escapeHtml(item.excerpt)}</p></div>`)
+              .map((item) => `<div class="evidence-row"><span class="badge source-badge">${escapeHtml(item.source || "source")}</span><p>${escapeHtml(formatEvidenceSnippet(item.excerpt))}</p></div>`)
               .join("")
           : `<p class="muted">No source snippets found.</p>`
       }
@@ -1627,6 +1643,19 @@ function download(name, content, type) {
 function truncate(text, length) {
   const source = String(text || "");
   return source.length > length ? `${source.slice(0, length - 3)}...` : source;
+}
+
+function formatSessionId(sessionId) {
+  const source = String(sessionId || "");
+  return source.length > 12 ? `${source.slice(0, 8)}\u2026` : source;
+}
+
+function formatEvidenceSnippet(excerpt) {
+  const cleaned = String(excerpt || "")
+    .replace(/(?:\/gid\d{5})+\/?/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned.length > 120 ? `${cleaned.slice(0, 119)}\u2026` : cleaned;
 }
 
 function authFormValues() {

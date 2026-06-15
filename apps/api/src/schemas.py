@@ -48,6 +48,9 @@ class VentureMemo(BaseModel):
 class EvidenceItem(BaseModel):
     source: str
     excerpt: str
+    sessionId: str | None = None
+    documentId: str | None = None
+    filename: str | None = None
 
 
 class AgentTrace(BaseModel):
@@ -60,6 +63,8 @@ class AgentTrace(BaseModel):
 
 class DocumentAnalyzeResponse(BaseModel):
     sessionId: str
+    documentId: str | None = None
+    filename: str | None = None
     memo: VentureMemo
     evidence: list[EvidenceItem] = Field(default_factory=list)
     agentTraces: list[AgentTrace] = Field(default_factory=list)

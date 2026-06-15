@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from uuid import uuid4
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
@@ -44,6 +45,12 @@ async def health() -> HealthResponse:
 async def demo_analyze() -> DocumentAnalyzeResponse:
     session_id = str(uuid4())
     response = build_demo_response(session_id)
+    response.documentId = "demo"
+    response.filename = "demo-report"
+    for item in response.evidence:
+        item.sessionId = session_id
+        item.documentId = response.documentId
+        item.filename = response.filename
     SESSION_STORE[session_id] = response.model_dump(mode="json", by_alias=True)
     return response
 
@@ -64,8 +71,10 @@ async def analyze_uploaded_document(file: UploadFile = File(...)) -> DocumentAna
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     upload_key = None
+    filename = safe_filename(file.filename)
+    document_id = hashlib.sha256(data).hexdigest()
     if storage.is_configured():
-        upload_key = f"uploads/{session_id}/{uuid4()}-{safe_filename(file.filename)}"
+        upload_key = f"uploads/{session_id}/{uuid4()}-{filename}"
         try:
             storage.upload_bytes(
                 key=upload_key,
@@ -88,12 +97,16 @@ async def analyze_uploaded_document(file: UploadFile = File(...)) -> DocumentAna
                 )
             )
 
-    response = analyze_document(
-        session_id=session_id,
-        document_text=text,
-        filename=safe_filename(file.filename),
-        settings=settings,
-    )
+    try:
+        response = analyze_document(
+            session_id=session_id,
+            document_id=document_id,
+            document_text=text,
+            filename=filename,
+            settings=settings,
+        )
+    except AIProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     response.agentTraces.extend(storage_traces)
     output_keys = _save_outputs_if_configured(response=response, storage=storage)
 

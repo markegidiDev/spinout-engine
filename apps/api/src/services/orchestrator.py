@@ -23,11 +23,17 @@ SPECIALIST_SYSTEM = (
 def analyze_document(
     *,
     session_id: str,
+    document_id: str,
     document_text: str,
     filename: str,
     settings: Settings,
 ) -> DocumentAnalyzeResponse:
-    evidence = build_evidence(document_text)
+    evidence = build_evidence(
+        document_text,
+        session_id=session_id,
+        document_id=document_id,
+        filename=filename,
+    )
     openai = OpenAIService(settings)
 
     if not openai.is_configured():
@@ -64,6 +70,8 @@ def analyze_document(
 
     response = DocumentAnalyzeResponse(
         sessionId=session_id,
+        documentId=document_id,
+        filename=filename,
         memo=synthesis.data["memo"],
         evidence=evidence,
         agentTraces=[
@@ -190,7 +198,13 @@ def synthesis_critic_agent(
     )
 
 
-def build_evidence(document_text: str) -> list[EvidenceItem]:
+def build_evidence(
+    document_text: str,
+    *,
+    session_id: str,
+    document_id: str,
+    filename: str,
+) -> list[EvidenceItem]:
     sections = _extract_named_sections(document_text)
     evidence: list[EvidenceItem] = []
 
@@ -200,19 +214,46 @@ def build_evidence(document_text: str) -> list[EvidenceItem]:
                 EvidenceItem(
                     source=section_name,
                     excerpt=_trim_excerpt(sections[section_name], 1800),
+                    sessionId=session_id,
+                    documentId=document_id,
+                    filename=filename,
                 )
             )
 
     if not evidence:
-        evidence.append(EvidenceItem(source="document:start", excerpt=_trim_excerpt(document_text, 1800)))
+        evidence.append(
+            EvidenceItem(
+                source="document:start",
+                excerpt=_trim_excerpt(document_text, 1800),
+                sessionId=session_id,
+                documentId=document_id,
+                filename=filename,
+            )
+        )
 
     keyword_chunks = _keyword_chunks(document_text)
     for index, chunk in enumerate(keyword_chunks[:4], start=1):
-        evidence.append(EvidenceItem(source=f"document:relevant-{index}", excerpt=chunk))
+        evidence.append(
+            EvidenceItem(
+                source=f"document:relevant-{index}",
+                excerpt=chunk,
+                sessionId=session_id,
+                documentId=document_id,
+                filename=filename,
+            )
+        )
 
     tail = document_text[-2200:]
     if tail and all(item.excerpt != _trim_excerpt(tail, 1400) for item in evidence):
-        evidence.append(EvidenceItem(source="document:end", excerpt=_trim_excerpt(tail, 1400)))
+        evidence.append(
+            EvidenceItem(
+                source="document:end",
+                excerpt=_trim_excerpt(tail, 1400),
+                sessionId=session_id,
+                documentId=document_id,
+                filename=filename,
+            )
+        )
 
     return evidence[:8]
 
@@ -288,10 +329,12 @@ def _demo_fallback(
     reason: str,
     settings: Settings,
 ) -> DocumentAnalyzeResponse:
-    if not settings.ENABLE_DEMO_FIXTURES:
+    if settings.is_production or not settings.ENABLE_DEMO_FIXTURES:
         raise AIProviderError(reason)
 
     response = build_demo_response(session_id)
+    response.documentId = evidence[0].documentId if evidence else "demo"
+    response.filename = evidence[0].filename if evidence else "demo-report"
     response.evidence = evidence or response.evidence
     response.agentTraces.append(
         AgentTrace(

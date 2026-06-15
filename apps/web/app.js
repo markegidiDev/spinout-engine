@@ -338,8 +338,8 @@ function topbar(active, options = {}) {
     </div>
     <div class="workflow">
       ${steps
-        .map((step) => `<span class="${active === step ? "active" : ""}">${step}</span>`)
-        .join('<span>-&gt;</span>')}
+        .map((step) => `<span class="workflow-step ${active === step ? "active" : ""}">${step}</span>`)
+        .join('<span class="workflow-separator" aria-hidden="true">&rsaquo;</span>')}
     </div>
     <div class="topbar-right">
       <div class="session-id">${escapeHtml(currentSessionId())}</div>
@@ -822,7 +822,6 @@ function renderDashboard() {
   const memo = currentMemo();
   const evidence = currentEvidence();
   const confidence = Number(memo.confidence || 73);
-  const milestones = normalizeMilestones(memo.milestones);
   const risks = memo.risks || [];
   return html`<main class="screen">
     ${topbar("Memo")}
@@ -844,11 +843,12 @@ function renderDashboard() {
           </div>
         </div>
         <div class="card">
-          <div class="section-label">Evidence Confidence</div>
+          <div class="section-label">Source Evidence Quality</div>
           <div class="confidence" style="margin-top:10px">${confidence}%</div>
           <div class="progress-track" style="margin:10px 0"><div class="progress-fill" style="width:${confidence}%"></div></div>
           <p class="muted" style="font-size:12px">${evidence.length} source snippets found</p>
         </div>
+        ${evidenceSnippets(evidence)}
       </aside>
       <section class="pane memo-pane">
         <div class="section-label">Venture Memo</div>
@@ -856,44 +856,54 @@ function renderDashboard() {
           <div class="memo-heading">Company Idea</div>
           <div class="memo-title">${escapeHtml(memo.oneLineCompany)}</div>
         </div>
-        <div class="memo-grid">
-          ${memoBlock("Problem", memo.problem)}
-          ${memoBlock("Target Customer", memo.targetCustomer)}
-          ${memoBlock("Initial Wedge", memo.initialWedge)}
-          ${memoBlock("Why Now", memo.whyNow)}
+        ${missingEvidenceAlert(memo.missingEvidence)}
+        <div class="memo-section">
+          ${memoSectionHeader(1, "Foundation")}
+          <div class="memo-grid">
+            ${memoBlock("Problem", memo.problem)}
+            ${memoBlock("Target Customer", memo.targetCustomer)}
+          </div>
         </div>
-        ${memoBlock("Product Concept", memo.productConcept)}
-        ${memoBlock("Technical Novelty", memo.technicalNovelty)}
-        ${memoBlock("Technical Moat", memo.technicalMoat, true)}
-        ${memoBlock("Business Model", memo.businessModel)}
-        <div class="card">
-          <h3>30 / 60 / 90-Day Milestones</h3>
-          <div class="list">${milestones.map((item) => `<div class="list-row"><span class="badge">${item.period}</span><span>${escapeHtml(item.goal)}</span></div>`).join("")}</div>
+        <div class="memo-section">
+          ${memoSectionHeader(2, "Go-to-market")}
+          <div class="memo-grid">
+            ${memoBlock("Initial Wedge", memo.initialWedge)}
+            ${memoBlock("Why Now", memo.whyNow)}
+            ${memoBlock("Business Model", memo.businessModel, { full: true })}
+          </div>
         </div>
-        <div class="card">
-          <h3>Key Risks</h3>
-          <div class="list">${risks.map((risk) => riskRow(risk)).join("")}</div>
+        <div class="memo-section">
+          ${memoSectionHeader(3, "Technology")}
+          <div class="memo-grid">
+            ${memoBlock("Product Concept", memo.productConcept)}
+            ${memoBlock("Technical Novelty", memo.technicalNovelty)}
+            ${memoBlock("Technical Moat", memo.technicalMoat, { accented: true, full: true })}
+          </div>
         </div>
-        <div class="card error">
-          <h3 style="color:var(--error)">Missing Evidence</h3>
-          <div class="list">${(memo.missingEvidence || []).map((item) => `<div class="list-row"><span class="badge danger">Gap</span><span>${escapeHtml(item)}</span></div>`).join("")}</div>
+        <div class="memo-section">
+          ${memoSectionHeader(4, "Execution")}
+          <div class="card">
+            <h3>30 / 60 / 90-Day Milestones</h3>
+            ${milestoneGrid(memo.milestones)}
+          </div>
         </div>
-        <div class="card memo-evidence-card">
-          <h3>Evidence</h3>
-          <div class="list">
-            ${evidence
-              .slice(0, 6)
-              .map((item) => `<div class="evidence-row"><span class="badge source-badge">${escapeHtml(item.source || "source")}</span><p>${escapeHtml(item.excerpt)}</p></div>`)
-              .join("")}
+        <div class="memo-section">
+          ${memoSectionHeader(5, "Key Risks")}
+          <div class="card">
+            <h3>Key Risks</h3>
+            <div class="list">${risks.map((risk) => riskRow(risk)).join("")}</div>
           </div>
         </div>
       </section>
       <aside class="pane">
         <div class="section-label">Investor Readiness</div>
-        <div class="card" style="text-align:center">
+        <div class="card readiness-card">
           <div class="readiness-ring" style="--ring:${Math.round((confidence / 100) * 360)}deg"><div class="readiness-inner">${confidence}</div></div>
-          <div class="muted" style="font-size:12px">out of 100</div>
-          <span class="chip primary" style="margin-top:12px">Needs proof points</span>
+          <div class="readiness-copy">
+            <strong>${confidence}/100</strong>
+            <div class="muted">Investor readiness</div>
+            <span class="chip primary">Needs proof points</span>
+          </div>
         </div>
         <div class="card">
           <h3>Evidence Claims</h3>
@@ -909,11 +919,68 @@ function renderDashboard() {
   </main>`;
 }
 
-function memoBlock(title, text, accented = false) {
-  return html`<article class="card memo-block" style="${accented ? "border-left:3px solid var(--primary)" : ""}">
+function memoSectionHeader(number, title) {
+  return html`<div class="memo-section-header">
+    <span class="memo-section-number">${number}</span>
+    <span class="memo-section-title">${escapeHtml(title)}</span>
+  </div>`;
+}
+
+function memoBlock(title, text, options = {}) {
+  const config = typeof options === "boolean" ? { accented: options } : options;
+  const accented = Boolean(config.accented);
+  const full = Boolean(config.full);
+  return html`<article class="card memo-block ${full ? "full-width" : ""}" style="${accented ? "border-left:3px solid var(--primary)" : ""}">
     <h3 style="${accented ? "color:var(--primary)" : ""}">${escapeHtml(title)}</h3>
     <p>${escapeHtml(text)}</p>
   </article>`;
+}
+
+function missingEvidenceAlert(items = []) {
+  const gaps = items.length ? items : ["No critical evidence gaps detected yet."];
+  return html`<div class="card error missing-evidence-alert">
+    <h3>Missing Evidence</h3>
+    <div class="list">${gaps.map((item) => `<div class="list-row"><span class="badge danger">Gap</span><span>${escapeHtml(item)}</span></div>`).join("")}</div>
+  </div>`;
+}
+
+function milestoneGrid(milestones = {}) {
+  const groups = [
+    ["30days", "30 days"],
+    ["60days", "60 days"],
+    ["90days", "90 days"],
+  ];
+  return html`<div class="milestone-grid">
+    ${groups
+      .map(([key, label]) => {
+        const goals = milestones[key] || [];
+        return `<div class="milestone-column">
+          <h4>${label}</h4>
+          ${
+            goals.length
+              ? `<ul>${goals.map((goal) => `<li>${escapeHtml(goal)}</li>`).join("")}</ul>`
+              : `<p class="muted">No milestone set.</p>`
+          }
+        </div>`;
+      })
+      .join("")}
+  </div>`;
+}
+
+function evidenceSnippets(evidence) {
+  return html`<div class="card memo-evidence-card">
+    <h3>Evidence Snippets</h3>
+    <div class="list">
+      ${
+        evidence.length
+          ? evidence
+              .slice(0, 6)
+              .map((item) => `<div class="evidence-row"><span class="badge source-badge">${escapeHtml(item.source || "source")}</span><p>${escapeHtml(item.excerpt)}</p></div>`)
+              .join("")
+          : `<p class="muted">No source snippets found.</p>`
+      }
+    </div>
+  </div>`;
 }
 
 function normalizeMilestones(milestones = {}) {
@@ -1039,6 +1106,8 @@ function renderEvaluation(evaluation) {
 function renderFinal() {
   const memo = currentMemo();
   const improvedPitch = buildImprovedPitch(memo);
+  const gaps = (memo.missingEvidence || []).slice(0, 4);
+  const experiments = normalizeMilestones(memo.milestones).slice(0, 4);
   return html`<main class="screen">
     ${topbar("Final Pitch", { back: { action: "investor-room", label: "Back" } })}
     <section class="final-wrap">
@@ -1046,42 +1115,92 @@ function renderFinal() {
         <h1 class="screen-title" style="margin:0">Pitch Improvement Report</h1>
         <span class="chip primary">Investor test complete</span>
       </div>
-      <div class="final-grid">
-        <div class="card">
-          <div class="section-label" style="margin-bottom:12px">Original Pitch</div>
-          <p style="font-style:italic;line-height:1.7">"${escapeHtml(memo.pitch60s)}"</p>
-        </div>
-        <div class="card feature">
-          <div class="memo-heading">Improved Pitch</div>
-          <p style="color:var(--on-primary-container);font-style:italic;line-height:1.7">"${escapeHtml(improvedPitch)}"</p>
-        </div>
+      <div class="final-status-strip">
+        <span><span class="section-label">Readiness score:</span> <strong>${Number(memo.confidence || 73)}</strong></span>
+        <span class="final-status-divider">|</span>
+        <span><span class="section-label">Gaps identified:</span> <strong>${gaps.length}</strong></span>
+        <span class="final-status-divider">|</span>
+        <span><span class="section-label">Experiments queued:</span> <strong>${experiments.length}</strong></span>
       </div>
-      <div class="final-grid">
+
+      <section class="final-section">
+        <div class="section-label final-section-label">Pitch</div>
+        <div class="pitch-grid">
+          <div class="card feature pitch-feature-card">
+            <div class="memo-heading">Improved Pitch</div>
+            <p>${escapeHtml(improvedPitch)}</p>
+          </div>
+          <div class="card original-pitch-card">
+            <div class="section-label">Original Pitch</div>
+            <p>${escapeHtml(memo.pitch60s)}</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="final-section">
+        <div class="section-label final-section-label">Open questions</div>
+        <div class="card open-questions-card">
+          ${openQuestionRows(gaps, experiments)}
+        </div>
+      </section>
+
+      <section class="final-section">
+        <div class="section-label final-section-label">Export</div>
         <div class="card">
-          <h3 style="color:var(--error)">Top Objections</h3>
-          <div class="list">${(memo.missingEvidence || []).slice(0, 4).map((item, i) => `<div class="list-row"><span class="badge danger">${i + 1}</span><span>${escapeHtml(item)}</span></div>`).join("")}</div>
+          <div class="export-row">
+            <button class="btn" data-action="copy-memo">Copy memo</button>
+            <button class="btn" data-action="download-md">Download MD</button>
+            <button class="btn" data-action="download-json">Download JSON</button>
+            <button class="btn primary export-primary" data-action="save-report">Save investor report</button>
+          </div>
         </div>
-        <div class="card">
-          <h3 style="color:var(--primary)">Next Experiments</h3>
-          <div class="list">${normalizeMilestones(memo.milestones).slice(0, 4).map((item, i) => `<div class="list-row"><span class="badge ok">${i + 1}</span><span>${escapeHtml(item.goal)}</span></div>`).join("")}</div>
-        </div>
-      </div>
-      <div class="card">
-        <h3>Export</h3>
-        <div class="format-row" style="margin-bottom:16px">
-          <button class="btn" data-action="copy-memo">Copy memo</button>
-          <button class="btn" data-action="download-md">Download MD</button>
-          <button class="btn" data-action="download-json">Download JSON</button>
-          <button class="btn primary" data-action="save-report">Save investor report</button>
-        </div>
-      </div>
+      </section>
     </section>
   </main>`;
 }
 
+function openQuestionRows(gaps, experiments) {
+  const rows = gaps.length ? gaps : ["Clarify the strongest remaining evidence gap."];
+  return rows
+    .map((gap, index) => {
+      const experiment = experiments[index]?.goal || "Define the next validation experiment.";
+      return `<div class="open-question-row">
+        <span class="badge danger">${index + 1}</span>
+        <span class="open-question-objection">${escapeHtml(gap)}</span>
+        <span class="open-question-experiment"><span class="badge ok">Ok</span>${escapeHtml(experiment)}</span>
+      </div>`;
+    })
+    .join("");
+}
+
 function buildImprovedPitch(memo) {
-  const wedge = memo.initialWedge || memo.targetCustomer;
-  return `${memo.oneLineCompany} The first wedge is ${wedge} The urgent pain is ${memo.problem} The product starts as ${memo.productConcept} The moat compounds through ${memo.technicalMoat} Next proof points: ${(memo.missingEvidence || []).slice(0, 2).join("; ")}.`;
+  const company = cleanPitchFragment(memo.oneLineCompany);
+  const problem = cleanPitchFragment(memo.problem);
+  const wedge = normalizePitchClause(memo.initialWedge || memo.targetCustomer)
+    .replace(/^start with\s+/i, "")
+    .replace(/^starting with\s+/i, "");
+  const product = cleanPitchFragment(memo.productConcept);
+  const moat = normalizePitchClause(memo.technicalMoat || memo.technicalNovelty)
+    .replace(/^a defensible product could emerge from\s+/i, "")
+    .replace(/^defensibility (could|should) come from\s+/i, "");
+  const proofPoints = (memo.missingEvidence || [])
+    .slice(0, 2)
+    .map(normalizePitchClause)
+    .filter(Boolean);
+  const proofClause = proofPoints.length
+    ? `Our next proof points are ${proofPoints.join(" and ")}, so we can validate both customer urgency and the evidence base before scaling.`
+    : "Our next step is to validate customer urgency, product performance, and repeatable buying intent before scaling.";
+
+  return `${company}. ${problem}. We will enter through ${wedge}, a focused wedge that lets us prove demand with a buyer who already feels the pain. We give customers ${normalizePitchClause(product)}. Defensibility should compound through ${moat}. ${proofClause}`;
+}
+
+function cleanPitchFragment(value) {
+  return String(value || "").trim().replace(/[.!?]+$/, "");
+}
+
+function normalizePitchClause(value) {
+  const fragment = cleanPitchFragment(value);
+  return fragment ? fragment.charAt(0).toLowerCase() + fragment.slice(1) : "";
 }
 
 function iconDocument() {

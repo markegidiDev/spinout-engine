@@ -51,6 +51,10 @@ async def demo_analyze() -> DocumentAnalyzeResponse:
         item.sessionId = session_id
         item.documentId = response.documentId
         item.filename = response.filename
+    for section in response.evidenceSections:
+        section.sessionId = session_id
+        section.documentId = response.documentId
+        section.filename = response.filename
     SESSION_STORE[session_id] = response.model_dump(mode="json", by_alias=True)
     return response
 

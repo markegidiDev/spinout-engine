@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     APP_ENV: str = "development"
     PORT: int = 8080
-    ALLOWED_ORIGINS: str = "http://localhost:3000"
+    ALLOWED_ORIGINS: str = "http://localhost:3000,https://spinout-engine.vercel.app"
 
     OPENAI_API_KEY: str = ""
     OPENAI_BASE_URL: str = ""

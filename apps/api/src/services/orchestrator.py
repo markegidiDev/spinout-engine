@@ -8,7 +8,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from src.config import Settings
-from src.schemas import AgentResult, AgentTrace, DocumentAnalyzeResponse, EvidenceItem, VentureMemo
+from src.schemas import AgentResult, AgentTrace, DocumentAnalyzeResponse, EvidenceItem, EvidenceSection, VentureMemo
 from src.services.demo_data import build_demo_response
 from src.services.gemini_service import GeminiProviderError, GeminiService
 from src.services.openai_service import AIProviderError, OpenAIService
@@ -34,12 +34,19 @@ def analyze_document(
         document_id=document_id,
         filename=filename,
     )
+    evidence_sections = build_evidence_sections(
+        document_text,
+        session_id=session_id,
+        document_id=document_id,
+        filename=filename,
+    )
     openai = OpenAIService(settings)
 
     if not openai.is_configured():
         return _demo_fallback(
             session_id=session_id,
             evidence=evidence,
+            evidence_sections=evidence_sections,
             reason="OpenAI is not configured",
             settings=settings,
         )
@@ -60,10 +67,15 @@ def analyze_document(
                 "competitorRisk": competitors.data,
             },
         )
+        evidence_sections = evidence_section_summary_agent(
+            openai=openai,
+            sections=evidence_sections,
+        )
     except Exception as exc:
         return _demo_fallback(
             session_id=session_id,
             evidence=evidence,
+            evidence_sections=evidence_sections,
             reason=f"OpenAI analysis failed: {exc.__class__.__name__}",
             settings=settings,
         )
@@ -74,6 +86,7 @@ def analyze_document(
         filename=filename,
         memo=synthesis.data["memo"],
         evidence=evidence,
+        evidenceSections=evidence_sections,
         agentTraces=[
             paper.trace,
             technical.trace,
@@ -198,6 +211,51 @@ def synthesis_critic_agent(
     )
 
 
+def evidence_section_summary_agent(
+    *,
+    openai: OpenAIService,
+    sections: list[EvidenceSection],
+) -> list[EvidenceSection]:
+    if not sections:
+        return sections
+
+    requested = [
+        {
+            "kind": section.kind,
+            "title": section.title,
+            "sourceLabel": section.sourceLabel,
+            "source": section.source[:2200],
+        }
+        for section in sections
+    ]
+    try:
+        raw = openai.complete_json(
+            system=(
+                "You summarize official source excerpts from an uploaded research document. "
+                "Use only the supplied source text. Do not add outside facts. "
+                "Write 3 to 5 clear sentences per section for a non-technical product demo audience."
+            ),
+            user=(
+                "Return JSON with key evidenceSections. Each item must include kind and summary. "
+                "Keep exactly these kinds: abstract, technology, evidence, limitations.\n\n"
+                f"Sections: {json.dumps(requested, ensure_ascii=False)}"
+            ),
+            model=openai.settings.OPENAI_MODEL_STRONG,
+        )
+    except Exception:
+        return sections
+    summaries = {
+        str(item.get("kind")): str(item.get("summary") or "").strip()
+        for item in raw.get("evidenceSections", [])
+        if isinstance(item, dict)
+    }
+    output: list[EvidenceSection] = []
+    for section in sections:
+        summary = summaries.get(section.kind) or _fallback_section_summary(section.source)
+        output.append(section.model_copy(update={"summary": summary}))
+    return output
+
+
 def build_evidence(
     document_text: str,
     *,
@@ -205,6 +263,7 @@ def build_evidence(
     document_id: str,
     filename: str,
 ) -> list[EvidenceItem]:
+    document_text = _normalize_document_text(document_text)
     sections = _extract_named_sections(document_text)
     evidence: list[EvidenceItem] = []
 
@@ -224,7 +283,7 @@ def build_evidence(
         evidence.append(
             EvidenceItem(
                 source="document:start",
-                excerpt=_trim_excerpt(document_text, 1800),
+                excerpt=_trim_excerpt(_without_references(document_text), 1800),
                 sessionId=session_id,
                 documentId=document_id,
                 filename=filename,
@@ -243,19 +302,86 @@ def build_evidence(
             )
         )
 
-    tail = document_text[-2200:]
-    if tail and all(item.excerpt != _trim_excerpt(tail, 1400) for item in evidence):
-        evidence.append(
-            EvidenceItem(
-                source="document:end",
-                excerpt=_trim_excerpt(tail, 1400),
+    return evidence[:8]
+
+
+def build_evidence_sections(
+    document_text: str,
+    *,
+    session_id: str,
+    document_id: str,
+    filename: str,
+) -> list[EvidenceSection]:
+    document_text = _normalize_document_text(document_text)
+    sections = _extract_named_sections(document_text)
+    body_text = _without_references(document_text)
+
+    specs = [
+        (
+            "abstract",
+            "Abstract excerpt",
+            "Abstract",
+            _first_available(
+                sections.get("abstract"),
+                _extract_inline_section(document_text, "abstract", ("keywords", "1. introduction", "introduction")),
+                _trim_excerpt(body_text, 1600),
+            ),
+        ),
+        (
+            "technology",
+            "Technology excerpt",
+            "Technology / methods",
+            _best_keyword_chunk(
+                body_text,
+                r"\b(creatine|technology|mechanism|metabolism|method|synthesis|transport|store|cellular|phosphocreatine|supplementation)\b",
+            ),
+        ),
+        (
+            "evidence",
+            "Evidence excerpt",
+            "Evidence / results",
+            _best_keyword_chunk(
+                body_text,
+                r"\b(evidence|study|studies|result|results|reported|shown|demonstrated|benefit|performance|trial|clinical|crossref|pubmed)\b",
+            ),
+        ),
+        (
+            "limitations",
+            "Limitations excerpt",
+            "Limitations / discussion",
+            _first_available(
+                sections.get("discussion"),
+                sections.get("conclusion"),
+                _best_keyword_chunk(
+                    body_text,
+                    r"\b(limitation|limitations|however|future work|unclear|risk|adverse|conflicting|insufficient|unknown|more research)\b",
+                ),
+            ),
+        ),
+    ]
+
+    evidence_sections: list[EvidenceSection] = []
+    seen: set[str] = set()
+    for kind, title, source_label, source in specs:
+        clean_source = _trim_excerpt(source, 1800)
+        key = clean_source[:220].lower()
+        if key in seen:
+            clean_source = _trim_excerpt(_alternate_chunk(body_text, seen), 1800)
+            key = clean_source[:220].lower()
+        seen.add(key)
+        evidence_sections.append(
+            EvidenceSection(
+                kind=kind,
+                title=title,
+                summary=_fallback_section_summary(clean_source),
+                source=clean_source,
+                sourceLabel=source_label,
                 sessionId=session_id,
                 documentId=document_id,
                 filename=filename,
             )
         )
-
-    return evidence[:8]
+    return evidence_sections
 
 
 def _apply_gemini_review(*, response: DocumentAnalyzeResponse, settings: Settings) -> None:
@@ -326,6 +452,7 @@ def _demo_fallback(
     *,
     session_id: str,
     evidence: list[EvidenceItem],
+    evidence_sections: list[EvidenceSection],
     reason: str,
     settings: Settings,
 ) -> DocumentAnalyzeResponse:
@@ -336,6 +463,7 @@ def _demo_fallback(
     response.documentId = evidence[0].documentId if evidence else "demo"
     response.filename = evidence[0].filename if evidence else "demo-report"
     response.evidence = evidence or response.evidence
+    response.evidenceSections = evidence_sections or response.evidenceSections
     response.agentTraces.append(
         AgentTrace(
             agent="OpenAI Fallback",
@@ -362,6 +490,52 @@ def _extract_named_sections(text: str) -> dict[str, str]:
     return sections
 
 
+def _clean_source_text(text: str) -> str:
+    cleaned = re.sub(r"(?:/gid\d{5})+/?", " ", text or "")
+    cleaned = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", cleaned)
+    cleaned = cleaned.replace("ﬁ", "fi").replace("ﬂ", "fl")
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned
+
+
+def _normalize_document_text(text: str) -> str:
+    cleaned = re.sub(r"(?:/gid\d{5})+/?", " ", text or "")
+    cleaned = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", cleaned)
+    cleaned = cleaned.replace("ﬁ", "fi").replace("ﬂ", "fl")
+    lines = [re.sub(r"[ \t]+", " ", line).strip() for line in cleaned.splitlines()]
+    return "\n".join(line for line in lines if line)
+
+
+def _without_references(text: str) -> str:
+    match = re.search(r"\b(references|bibliography)\b", text, flags=re.IGNORECASE)
+    if not match:
+        return text
+    head = text[: match.start()].strip()
+    return head or text
+
+
+def _first_available(*values: str | None) -> str:
+    for value in values:
+        clean = _clean_source_text(value or "")
+        if len(clean) >= 80:
+            return clean
+    return _clean_source_text(next((value for value in values if value), "") or "")
+
+
+def _extract_inline_section(text: str, start_label: str, end_labels: tuple[str, ...]) -> str:
+    start = re.search(rf"\b{re.escape(start_label)}\s*:\s*", text, flags=re.IGNORECASE)
+    if not start:
+        return ""
+    tail = text[start.end() :]
+    end_indexes = []
+    for label in end_labels:
+        match = re.search(rf"\b{re.escape(label)}\b\s*:?", tail, flags=re.IGNORECASE)
+        if match:
+            end_indexes.append(match.start())
+    end = min(end_indexes) if end_indexes else min(len(tail), 2200)
+    return tail[:end].strip()
+
+
 def _keyword_chunks(text: str) -> list[str]:
     paragraphs = [paragraph.strip() for paragraph in re.split(r"\n{2,}", text) if paragraph.strip()]
     keywords = re.compile(
@@ -372,11 +546,54 @@ def _keyword_chunks(text: str) -> list[str]:
     return _dedupe(chunks)
 
 
+def _best_keyword_chunk(text: str, pattern: str) -> str:
+    paragraphs = _candidate_paragraphs(text)
+    keywords = re.compile(pattern, flags=re.IGNORECASE)
+    matches = [paragraph for paragraph in paragraphs if keywords.search(paragraph)]
+    if matches:
+        return max(matches, key=lambda paragraph: min(len(paragraph), 1800))
+    return paragraphs[0] if paragraphs else text[:1800]
+
+
+def _alternate_chunk(text: str, seen: set[str]) -> str:
+    for paragraph in _candidate_paragraphs(text):
+        key = paragraph[:220].lower()
+        if key not in seen:
+            return paragraph
+    return text[:1800]
+
+
+def _candidate_paragraphs(text: str) -> list[str]:
+    chunks = [chunk.strip() for chunk in re.split(r"\n{2,}|(?<=\.)\s+(?=[A-Z])", text) if chunk.strip()]
+    output: list[str] = []
+    for chunk in chunks:
+        clean = _clean_source_text(chunk)
+        if len(clean) < 120:
+            continue
+        if _looks_like_reference(clean):
+            continue
+        output.append(_trim_excerpt(clean, 1800))
+    return _dedupe(output)
+
+
+def _looks_like_reference(text: str) -> bool:
+    citation_count = len(re.findall(r"\b\d{4}\b|\[(?:CrossRef|PubMed)\]", text))
+    author_list = len(re.findall(r"\b[A-Z][a-z]+,\s+[A-Z]\.", text))
+    return citation_count >= 4 or author_list >= 5
+
+
 def _trim_excerpt(text: str, limit: int) -> str:
-    compact = re.sub(r"\s+", " ", text).strip()
+    compact = _clean_source_text(text)
     if len(compact) <= limit:
         return compact
     return compact[: limit - 3].rsplit(" ", 1)[0] + "..."
+
+
+def _fallback_section_summary(source: str) -> str:
+    clean = _trim_excerpt(source, 620)
+    if not clean:
+        return "No reliable source text was extracted for this section."
+    return clean
 
 
 def _dedupe(values: list[str]) -> list[str]:

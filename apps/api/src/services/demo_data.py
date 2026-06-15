@@ -1,4 +1,4 @@
-from src.schemas import AgentTrace, DocumentAnalyzeResponse, EvidenceItem, VentureMemo
+from src.schemas import AgentTrace, DocumentAnalyzeResponse, EvidenceItem, EvidenceSection, VentureMemo
 
 
 def build_demo_memo() -> VentureMemo:
@@ -145,6 +145,68 @@ def build_demo_response(session_id: str) -> DocumentAnalyzeResponse:
                     "Future work should validate robustness across machine classes and live "
                     "factory noise conditions."
                 ),
+            ),
+        ],
+        evidenceSections=[
+            EvidenceSection(
+                kind="abstract",
+                title="Abstract excerpt",
+                summary=(
+                    "The demo paper describes an edge inference approach for industrial sensor streams. "
+                    "It frames factory downtime as the core operational problem and positions low-latency "
+                    "local analytics as a practical response. The excerpt supports the memo's focus on "
+                    "predictive maintenance and early anomaly detection."
+                ),
+                source=(
+                    "Compressed temporal inference on edge gateways detected early anomalies with "
+                    "sub-second latency in industrial sensor streams."
+                ),
+                sourceLabel="Abstract",
+            ),
+            EvidenceSection(
+                kind="technology",
+                title="Technology excerpt",
+                summary=(
+                    "The technical basis is a compact temporal model that can run on edge gateways. "
+                    "The model is designed to preserve early-warning accuracy while avoiding cloud-only "
+                    "processing. This supports a product concept built around on-site inference and "
+                    "factory data privacy."
+                ),
+                source=(
+                    "The paper combines compressed temporal models with adaptive thresholds that run "
+                    "on low-power edge gateways while preserving early-warning accuracy."
+                ),
+                sourceLabel="Technology / methods",
+            ),
+            EvidenceSection(
+                kind="evidence",
+                title="Evidence excerpt",
+                summary=(
+                    "The strongest evidence in the demo fixture is performance-oriented rather than "
+                    "commercial. It indicates that the model can detect anomalies quickly in sensor "
+                    "streams, but live factory validation is still needed. That limitation is reflected "
+                    "in the memo's confidence and next milestones."
+                ),
+                source=(
+                    "Early anomaly detection was measured on industrial sensor streams with sub-second "
+                    "latency and reduced gateway resource usage."
+                ),
+                sourceLabel="Evidence / results",
+            ),
+            EvidenceSection(
+                kind="limitations",
+                title="Limitations excerpt",
+                summary=(
+                    "The fixture explicitly notes that robustness across machine classes and live noise "
+                    "conditions remains unproven. This means the commercial memo should avoid claiming "
+                    "broad deployment readiness. The next proof point is a narrow pilot on a specific "
+                    "machine class."
+                ),
+                source=(
+                    "Future work should validate robustness across machine classes and live factory "
+                    "noise conditions."
+                ),
+                sourceLabel="Limitations / discussion",
             ),
         ],
         agentTraces=[

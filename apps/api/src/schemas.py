@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 Severity = Literal["low", "medium", "high"]
 InvestorMode = Literal["skeptical_vc", "technical_vc", "customer_angel"]
+EvidenceSectionKind = Literal["abstract", "technology", "evidence", "limitations"]
 
 
 class Competitor(BaseModel):
@@ -53,6 +54,17 @@ class EvidenceItem(BaseModel):
     filename: str | None = None
 
 
+class EvidenceSection(BaseModel):
+    kind: EvidenceSectionKind
+    title: str
+    summary: str
+    source: str
+    sourceLabel: str
+    sessionId: str | None = None
+    documentId: str | None = None
+    filename: str | None = None
+
+
 class AgentTrace(BaseModel):
     agent: str
     status: str
@@ -67,6 +79,7 @@ class DocumentAnalyzeResponse(BaseModel):
     filename: str | None = None
     memo: VentureMemo
     evidence: list[EvidenceItem] = Field(default_factory=list)
+    evidenceSections: list[EvidenceSection] = Field(default_factory=list)
     agentTraces: list[AgentTrace] = Field(default_factory=list)
 
 

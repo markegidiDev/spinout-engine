@@ -173,6 +173,40 @@ const demoResponse = {
       excerpt: "Future work should validate detection performance across varied water conditions and compare results with lab-grade methods.",
     },
   ],
+  evidenceSections: [
+    {
+      kind: "abstract",
+      title: "Abstract excerpt",
+      summary:
+        "The demo paper describes a low-cost optical sensing approach paired with edge inference. It frames microplastic screening as a faster field workflow before lab confirmation. The source supports the memo's focus on environmental testing teams and portable screening.",
+      source: "Low-cost optical sensors paired with edge inference detected microplastic signatures in controlled water samples.",
+      sourceLabel: "Abstract",
+    },
+    {
+      kind: "technology",
+      title: "Technology excerpt",
+      summary:
+        "The technical basis is the combination of optical sensing hardware and edge inference. The product idea depends on turning that mechanism into a reliable field workflow. The source does not prove a full defensible product yet, but it supports the technical novelty claim.",
+      source: "The paper combines low-cost optical sensing with edge inference to classify microplastic signatures without relying on centralized lab equipment.",
+      sourceLabel: "Technology / methods",
+    },
+    {
+      kind: "evidence",
+      title: "Evidence excerpt",
+      summary:
+        "The strongest evidence is controlled detection of microplastic signatures. That is useful early validation, but not yet enough to prove field performance across real water conditions. The memo therefore treats validation and third-party comparisons as important next proof points.",
+      source: "Low-cost optical sensors paired with edge inference detected microplastic signatures in controlled water samples.",
+      sourceLabel: "Evidence / results",
+    },
+    {
+      kind: "limitations",
+      title: "Limitations excerpt",
+      summary:
+        "The source explicitly calls for validation across varied water conditions and comparison with lab-grade methods. This limits how strongly the memo can claim readiness for regulated buyers. It also shapes the recommended pilot milestones.",
+      source: "Future work should validate detection performance across varied water conditions and compare results with lab-grade methods.",
+      sourceLabel: "Limitations / discussion",
+    },
+  ],
   agentTraces: fallbackAgents,
 };
 
@@ -374,6 +408,20 @@ function currentEvidence() {
   }
 
   return evidence;
+}
+
+function currentEvidenceSections(evidence) {
+  const sections = Array.isArray(state.result?.evidenceSections) ? state.result.evidenceSections : [];
+  if (!state.result) return demoResponse.evidenceSections || fallbackEvidenceSections(evidence);
+
+  const expectedDocumentId = state.result.documentId || "";
+  const expectedSessionId = state.result.sessionId || "";
+  const filtered = sections.filter((section) => {
+    const documentMatches = !expectedDocumentId || section.documentId === expectedDocumentId;
+    const sessionMatches = !section.sessionId || section.sessionId === expectedSessionId;
+    return documentMatches && sessionMatches;
+  });
+  return filtered.length ? filtered : fallbackEvidenceSections(evidence);
 }
 
 function currentAgents() {
@@ -837,6 +885,7 @@ function renderAgentCard(agent, status) {
 function renderDashboard() {
   const memo = currentMemo();
   const evidence = currentEvidence();
+  const evidenceSections = currentEvidenceSections(evidence);
   const confidence = Number(memo.confidence || 73);
   const risks = memo.risks || [];
   return html`<main class="screen">
@@ -864,7 +913,7 @@ function renderDashboard() {
           <div class="progress-track" style="margin:10px 0"><div class="progress-fill" style="width:${confidence}%"></div></div>
           <p class="muted" style="font-size:12px">${evidence.length} source snippets found</p>
         </div>
-        ${evidenceSnippets(evidence)}
+        ${sourcesAndEvidence(evidenceSections, evidence.length)}
       </aside>
       <section class="pane memo-pane">
         <div class="section-label">Venture Memo</div>
@@ -983,20 +1032,58 @@ function milestoneGrid(milestones = {}) {
   </div>`;
 }
 
-function evidenceSnippets(evidence) {
+function sourcesAndEvidence(sections, evidenceCount) {
   return html`<div class="card memo-evidence-card">
-    <h3>Evidence Snippets</h3>
-    <div class="list">
+    <h3>Sources & Evidence</h3>
+    <p class="muted source-summary">${sections.length} source sections from ${evidenceCount} extracted snippets</p>
+    <div class="source-section-list">
       ${
-        evidence.length
-          ? evidence
-              .slice(0, 6)
-              .map((item) => `<div class="evidence-row"><span class="badge source-badge">${escapeHtml(item.source || "source")}</span><p>${escapeHtml(formatEvidenceSnippet(item.excerpt))}</p></div>`)
-              .join("")
-          : `<p class="muted">No source snippets found.</p>`
+        sections.length
+          ? sections.map((section) => sourceSectionDetails(section)).join("")
+          : `<p class="muted">No source sections found.</p>`
       }
     </div>
   </div>`;
+}
+
+function sourceSectionDetails(section) {
+  return html`<details class="source-section">
+    <summary>
+      <span>${escapeHtml(section.title || formatEvidenceSource(section.kind || section.sourceLabel))}</span>
+      <span class="source-section-kind">${escapeHtml(section.sourceLabel || "Source")}</span>
+    </summary>
+    <div class="source-section-body">
+      <div class="source-section-block">
+        <div class="section-label">Summary</div>
+        <p>${escapeHtml(section.summary || fallbackSourceSummary(section.source))}</p>
+      </div>
+      <div class="source-section-block source-quote">
+        <div class="section-label">Official extracted source</div>
+        <p>${escapeHtml(formatSourceText(section.source))}</p>
+      </div>
+    </div>
+  </details>`;
+}
+
+function fallbackEvidenceSections(evidence) {
+  const sourceItems = Array.isArray(evidence) ? evidence.slice(0, 4) : [];
+  const defaults = [
+    ["abstract", "Abstract excerpt", "Abstract"],
+    ["technology", "Technology excerpt", "Technology / methods"],
+    ["evidence", "Evidence excerpt", "Evidence / results"],
+    ["limitations", "Limitations excerpt", "Limitations / discussion"],
+  ];
+  return defaults.map(([kind, title, sourceLabel], index) => {
+    const item = sourceItems[index] || sourceItems[0] || {};
+    const source = item.excerpt || "";
+    return {
+      kind,
+      title,
+      sourceLabel,
+      summary: fallbackSourceSummary(source),
+      source,
+    };
+  });
 }
 
 function normalizeMilestones(milestones = {}) {
@@ -1656,6 +1743,28 @@ function formatEvidenceSnippet(excerpt) {
     .replace(/\s+/g, " ")
     .trim();
   return cleaned.length > 120 ? `${cleaned.slice(0, 119)}\u2026` : cleaned;
+}
+
+function formatSourceText(source) {
+  const cleaned = String(source || "")
+    .replace(/(?:\/gid\d{5})+\/?/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned || "No official source text was extracted for this section.";
+}
+
+function fallbackSourceSummary(source) {
+  const cleaned = formatSourceText(source);
+  return cleaned.length > 420 ? `${cleaned.slice(0, 417).rsplit(" ", 1)[0]}...` : cleaned;
+}
+
+function formatEvidenceSource(source) {
+  const clean = String(source || "Source")
+    .replace(/^document:/, "")
+    .replace(/^mock-paper:/, "")
+    .replace(/[-_]+/g, " ")
+    .trim();
+  return clean ? clean.replace(/\b\w/g, (char) => char.toUpperCase()) : "Source";
 }
 
 function authFormValues() {

@@ -220,6 +220,7 @@ const state = {
   userId: "",
   userEmail: "",
   sidebarOpen: true,
+  userMenuOpen: false,
   authModalOpen: false,
   recentChats: [],
   analysisProgress: 0,
@@ -228,6 +229,8 @@ const state = {
   analysisPromise: null,
   result: null,
   toasts: [],
+  errorDialog: null,
+  confirmDialog: null,
   questionIndex: 0,
   currentQuestion: null,
   currentPersona: "Skeptical VC focused on market size, urgency, defensibility, and fundraising risk.",
@@ -270,6 +273,9 @@ function scrollEvaluationIntoView() {
 }
 
 function setScreen(screen) {
+  if (state.screen === "investor" && screen !== "investor") {
+    stopInvestorAudio({ silent: true });
+  }
   state.screen = screen;
   render();
   resetViewportScroll();
@@ -283,6 +289,16 @@ function toast(message) {
     state.toasts = state.toasts.filter((item) => item.id !== id);
     render();
   }, 2600);
+}
+
+function showErrorPopup(message, title = "Something needs attention") {
+  state.errorDialog = { title, message };
+  render();
+}
+
+function showConfirmPopup({ title, message, confirmAction, confirmLabel = "Confirm" }) {
+  state.confirmDialog = { title, message, confirmAction, confirmLabel };
+  render();
 }
 
 function initFirebaseAuth() {
@@ -311,6 +327,7 @@ function initFirebaseAuth() {
           state.isAuthenticated = false;
           state.userId = "";
           state.userEmail = "";
+          state.userMenuOpen = false;
         }
         render();
       },
@@ -353,6 +370,27 @@ function iconArrow() {
   </svg>`;
 }
 
+function iconPlus() {
+  return html`<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+    <path d="M9 3.5v11M3.5 9h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+  </svg>`;
+}
+
+function iconSidebar() {
+  return html`<svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+    <rect x="2.5" y="3" width="13" height="12" rx="2.2" stroke="currentColor" stroke-width="1.6"></rect>
+    <path d="M7 3.5v11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
+    <path d="M4.8 6.2h.01M4.8 9h.01M4.8 11.8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+  </svg>`;
+}
+
+function iconUser() {
+  return html`<svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true">
+    <path d="M8.5 8.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="1.5"></path>
+    <path d="M3 14.5c.7-2.4 2.6-3.7 5.5-3.7s4.8 1.3 5.5 3.7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+  </svg>`;
+}
+
 function brand(small = false) {
   return html`<button class="brand brand-button" data-action="home" aria-label="Go to home">
     <div class="brand-mark ${small ? "small" : ""}">${iconSpark(small ? 13 : 18)}</div>
@@ -362,9 +400,6 @@ function brand(small = false) {
 
 function topbar(active, options = {}) {
   const steps = ["Memo", "Investor Room", "Final Pitch"];
-  const userBtn = state.isAuthenticated
-    ? `<span class="avatar-chip" title="${escapeHtml(state.userEmail)}">${escapeHtml((state.userEmail || "S").slice(0, 1).toUpperCase())}</span>`
-    : `<button class="btn compact" data-action="open-auth-modal">Log in</button>`;
   return html`<header class="topbar">
     <div class="brand-wrap">
       ${brand(true)}
@@ -375,10 +410,7 @@ function topbar(active, options = {}) {
         .map((step) => `<span class="workflow-step ${active === step ? "active" : ""}">${step}</span>`)
         .join('<span class="workflow-separator" aria-hidden="true">&rsaquo;</span>')}
     </div>
-    <div class="topbar-right">
-      <div class="session-id">${escapeHtml(currentSessionId())}</div>
-      ${userBtn}
-    </div>
+    <div class="session-id">${escapeHtml(currentSessionId())}</div>
   </header>`;
 }
 
@@ -442,11 +474,6 @@ function renderLanding() {
         <a href="#about">About</a>
         <a href="#pricing">Pricing</a>
       </nav>
-      <div class="landing-actions">
-        ${state.isAuthenticated
-          ? `<span class="chip primary">${escapeHtml(state.userEmail || "Workspace")}</span><button class="btn compact" data-action="logout">Log out</button>`
-          : `<button class="btn compact" data-action="open-auth-modal">Log in</button><button class="btn compact primary" data-action="open-auth-modal">Sign up</button>`}
-      </div>
     </header>
     <section class="hero">
       <div class="hero-copy">
@@ -767,7 +794,6 @@ function renderAuthPanel() {
       <input id="auth-email" type="email" placeholder="Email" autocomplete="email">
       <input id="auth-password" type="password" placeholder="Password" autocomplete="${isRegister ? "new-password" : "current-password"}">
     </div>
-    ${state.authError ? `<p class="auth-error">${escapeHtml(state.authError)}</p>` : ""}
     <button class="btn primary full" data-action="${isRegister ? "register" : "login"}" ${state.authLoading ? "disabled" : ""}>${buttonLabel}</button>
     <button class="btn full" data-action="toggle-auth">${isRegister ? "Use existing account" : "Create account"}</button>
   </div>`;
@@ -804,7 +830,7 @@ function renderUpload() {
       </div>
       <div class="card note">
         <span class="status-dot"></span>
-        <span>Files are sent to the configured Spinout Engine API. Upload errors are shown directly so the backend or file can be fixed.</span>
+        <span>Files are sent to the configured Spinout Engine API. Upload errors are shown in a confirmation popup so the backend or file can be fixed.</span>
       </div>
     </section>
   </main>`;
@@ -1340,7 +1366,6 @@ function renderAuthModal() {
         <input id="auth-email" type="email" placeholder="Email" autocomplete="email">
         <input id="auth-password" type="password" placeholder="Password" autocomplete="${isRegister ? "new-password" : "current-password"}">
       </div>
-      ${state.authError ? `<p class="auth-error">${escapeHtml(state.authError)}</p>` : ""}
       <button class="btn primary full" data-action="${isRegister ? "register" : "login"}" ${state.authLoading ? "disabled" : ""}>${state.authLoading ? '<span class="spinner-sm"></span> ' : ""}${buttonLabel}</button>
       <button class="auth-switch-btn" data-action="toggle-auth">${isRegister ? "Already have an account? Log in" : "Need an account? Sign up"}</button>
     </div>
@@ -1349,6 +1374,36 @@ function renderAuthModal() {
 
 function renderToasts() {
   return html`<div class="toast-stack">${state.toasts.map((item) => `<div class="toast">${escapeHtml(item.message)}</div>`).join("")}</div>`;
+}
+
+function renderErrorDialog() {
+  if (!state.errorDialog) return "";
+  return html`<div class="error-dialog-backdrop" role="presentation">
+    <section class="error-dialog" role="alertdialog" aria-modal="true" aria-labelledby="error-dialog-title" aria-describedby="error-dialog-message">
+      <div class="error-dialog-icon">!</div>
+      <div class="error-dialog-copy">
+        <h2 id="error-dialog-title">${escapeHtml(state.errorDialog.title)}</h2>
+        <p id="error-dialog-message">${escapeHtml(state.errorDialog.message)}</p>
+      </div>
+      <button class="btn primary full" data-action="close-error-popup" autofocus>OK</button>
+    </section>
+  </div>`;
+}
+
+function renderConfirmDialog() {
+  if (!state.confirmDialog) return "";
+  return html`<div class="confirm-dialog-backdrop" role="presentation">
+    <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-message">
+      <div class="confirm-dialog-copy">
+        <h2 id="confirm-dialog-title">${escapeHtml(state.confirmDialog.title)}</h2>
+        <p id="confirm-dialog-message">${escapeHtml(state.confirmDialog.message)}</p>
+      </div>
+      <div class="confirm-dialog-actions">
+        <button class="btn full" data-action="close-confirm-popup">Cancel</button>
+        <button class="btn primary full" data-action="${state.confirmDialog.confirmAction}" autofocus>${escapeHtml(state.confirmDialog.confirmLabel)}</button>
+      </div>
+    </section>
+  </div>`;
 }
 
 function render() {
@@ -1365,17 +1420,28 @@ function render() {
             : state.screen === "investor"
               ? renderInvestor()
               : renderFinal();
-  app.innerHTML = `<div class="app-shell ${state.isAuthenticated ? "with-sidebar" : ""}">${renderToasts()}${state.isAuthenticated ? renderSidebar(content) : content}${renderAuthModal()}</div>`;
+  app.innerHTML = `<div class="app-shell with-sidebar">${renderToasts()}${renderSidebar(content)}${renderAuthModal()}${renderErrorDialog()}${renderConfirmDialog()}</div>`;
+  if (state.errorDialog || state.confirmDialog) {
+    requestAnimationFrame(() => {
+      document.querySelector('[autofocus]')?.focus();
+    });
+  }
 }
 
 function renderSidebar(content) {
   return html`<div class="workspace-layout ${state.sidebarOpen ? "sidebar-open" : "sidebar-closed"}">
     <aside class="workspace-sidebar">
-      <button class="sidebar-toggle" data-action="toggle-sidebar" aria-label="Toggle sidebar">${state.sidebarOpen ? "&lt;" : "&gt;"}</button>
-      <div class="sidebar-brand">${brand(true)}</div>
-      <button class="btn primary full sidebar-new" data-action="go-upload">${state.sidebarOpen ? "New analysis" : "+"}</button>
+      <button class="sidebar-toggle" data-action="toggle-sidebar" aria-label="Toggle sidebar" aria-expanded="${state.sidebarOpen ? "true" : "false"}">
+        ${iconSidebar()}
+      </button>
+      <div class="sidebar-new-row">
+        <button class="sidebar-new-button" data-action="go-upload" aria-label="New analysis">${iconPlus()}</button>
+        <span class="sidebar-new-text">New analysis</span>
+      </div>
       <div class="sidebar-section">
-        <div class="section-label">${state.sidebarOpen ? "Recent chats" : "Recent"}</div>
+        <div class="section-label sidebar-label-stack">
+          <span class="sidebar-fade-label label-open">Recents</span>
+        </div>
         <div class="chat-list">
           ${
             state.recentChats.length
@@ -1386,18 +1452,56 @@ function renderSidebar(content) {
                   </button>`
                   )
                   .join("")
-              : `<div class="empty-chat">${state.sidebarOpen ? "No analyses yet" : "-"}</div>`
+              : `<div class="empty-chat sidebar-label-stack">
+                  <span class="sidebar-fade-label label-open">No analyses yet</span>
+                </div>`
           }
         </div>
       </div>
       <div class="sidebar-user">
-        <span class="avatar-mini">${escapeHtml((state.userEmail || "S").slice(0, 1).toUpperCase())}</span>
-        <span class="sidebar-email">${escapeHtml(state.userEmail || "Workspace")}</span>
-        ${state.sidebarOpen ? `<button class="sidebar-logout" data-action="logout" title="Log out">${iconLogout()}</button>` : ""}
+        ${
+          state.isAuthenticated
+            ? `<button class="sidebar-user-trigger" data-action="toggle-user-menu" aria-haspopup="menu" aria-expanded="${state.userMenuOpen ? "true" : "false"}">
+                <span class="avatar-mini">${escapeHtml((state.userEmail || "S").slice(0, 1).toUpperCase())}</span>
+                <span class="sidebar-email">${escapeHtml(state.userEmail || "Workspace")}</span>
+              </button>
+              ${
+                state.userMenuOpen
+                  ? `<div class="sidebar-user-menu" role="menu">
+                      <button class="sidebar-menu-item" data-action="logout" role="menuitem">${iconLogout()}<span>Log out</span></button>
+                    </div>`
+                  : ""
+              }`
+            : `<button class="sidebar-user-trigger sidebar-login-trigger" data-action="open-auth-modal">
+                <span class="avatar-mini">${iconUser()}</span>
+                <span class="sidebar-email">Log in</span>
+              </button>`
+        }
       </div>
     </aside>
     <div class="workspace-main">${content}</div>
   </div>`;
+}
+
+function applySidebarOpenState() {
+  const layout = document.querySelector(".workspace-layout");
+  if (!layout) {
+    render();
+    return;
+  }
+
+  layout.classList.toggle("sidebar-open", state.sidebarOpen);
+  layout.classList.toggle("sidebar-closed", !state.sidebarOpen);
+
+  const toggle = layout.querySelector(".sidebar-toggle");
+  if (toggle) toggle.setAttribute("aria-expanded", state.sidebarOpen ? "true" : "false");
+
+  const userTrigger = layout.querySelector(".sidebar-user-trigger");
+  if (userTrigger) userTrigger.setAttribute("aria-expanded", state.userMenuOpen ? "true" : "false");
+
+  if (!state.userMenuOpen) {
+    layout.querySelector(".sidebar-user-menu")?.remove();
+  }
 }
 
 function applyPalette() {
@@ -1419,7 +1523,7 @@ function applyPalette() {
 
 async function startAnalysis(useFile) {
   if (useFile && !state.file) {
-    toast("Choose a PDF, DOCX, TXT, or MD file first");
+    showErrorPopup("Choose a PDF, DOCX, TXT, or MD file first");
     state.screen = "upload";
     render();
     return;
@@ -1476,7 +1580,7 @@ async function runPipeline() {
     state.analysisPromise = null;
     state.pendingSessionId = null;
     state.screen = "upload";
-    toast(state.analysisError);
+    showErrorPopup(state.analysisError);
     render();
     return;
   }
@@ -1582,8 +1686,16 @@ async function loadInvestorQuestion({ advance }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId: currentSessionId(), memo, mode: "skeptical_vc" }),
     });
+    if (state.screen !== "investor") {
+      state.voiceLoading = false;
+      return;
+    }
     if (response.ok) {
       const payload = await response.json();
+      if (state.screen !== "investor") {
+        state.voiceLoading = false;
+        return;
+      }
       state.currentQuestion = payload.question || memo.investorQuestions?.[state.questionIndex] || demoResponse.memo.investorQuestions[state.questionIndex];
       state.currentPersona = payload.investorPersona;
       state.currentAudio = {
@@ -1598,15 +1710,22 @@ async function loadInvestorQuestion({ advance }) {
       state.currentAudio = null;
     }
   } catch {
+    if (state.screen !== "investor") {
+      state.voiceLoading = false;
+      return;
+    }
     state.currentQuestion = memo.investorQuestions?.[state.questionIndex] || demoResponse.memo.investorQuestions[state.questionIndex];
     state.currentAudio = null;
-    toast("Investor audio unavailable; showing text question");
+    showErrorPopup("Investor audio unavailable; showing text question");
   }
   state.voiceLoading = false;
   render();
 }
 
 async function playInvestorAudio(audioPayload) {
+  if (state.screen !== "investor") {
+    return;
+  }
   const source = audioPayload?.url || (audioPayload?.base64 ? `data:audio/mpeg;base64,${audioPayload.base64}` : "");
   if (!source) {
     return;
@@ -1628,15 +1747,22 @@ async function playInvestorAudio(audioPayload) {
   audio.onerror = () => {
     state.voiceActive = false;
     state.voiceLoading = false;
-    toast("Audio could not be played");
+    showErrorPopup("Audio could not be played");
     render();
   };
   try {
     await audio.play();
+    if (state.screen !== "investor" || state.audioElement !== audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
   } catch {
+    if (state.screen !== "investor" || state.audioElement !== audio) {
+      return;
+    }
     state.voiceActive = false;
     state.voiceLoading = false;
-    toast("Audio ready. Click Play audio if it does not start automatically.");
+    showErrorPopup("Audio ready. Click Play audio if it does not start automatically.");
   }
 }
 
@@ -1657,7 +1783,7 @@ async function submitAnswer() {
   if (state.answerLoading) return;
   const answer = state.founderAnswer.trim();
   if (!answer) {
-    toast("Add an answer first");
+    showErrorPopup("Add an answer first");
     return;
   }
   const question = state.currentQuestion || currentMemo().investorQuestions?.[state.questionIndex] || demoResponse.memo.investorQuestions[0];
@@ -1791,7 +1917,7 @@ function friendlyFirebaseError(error) {
 async function handleAuthAction(action) {
   if (!firebaseAuth) {
     state.authError = firebaseInitError || "Firebase Auth is not configured.";
-    toast(state.authError);
+    showErrorPopup(state.authError, "Authentication unavailable");
     render();
     return;
   }
@@ -1799,6 +1925,7 @@ async function handleAuthAction(action) {
   const { email, password } = authFormValues();
   if (!email || !password) {
     state.authError = "Enter email and password.";
+    showErrorPopup(state.authError, "Authentication error");
     render();
     return;
   }
@@ -1820,7 +1947,7 @@ async function handleAuthAction(action) {
     toast(action === "register" ? "Account created" : "Logged in");
   } catch (error) {
     state.authError = friendlyFirebaseError(error);
-    toast(state.authError);
+    showErrorPopup(state.authError, "Authentication error");
   } finally {
     state.authLoading = false;
     render();
@@ -1829,8 +1956,31 @@ async function handleAuthAction(action) {
 
 app.addEventListener("click", async (event) => {
   const actionEl = event.target.closest("[data-action]");
-  if (!actionEl) return;
+  if (!actionEl) {
+    if (state.userMenuOpen && !event.target.closest(".sidebar-user")) {
+      state.userMenuOpen = false;
+      document.querySelector(".sidebar-user-trigger")?.setAttribute("aria-expanded", "false");
+      render();
+    }
+    return;
+  }
   const action = actionEl.dataset.action;
+  const isUserMenuClick = Boolean(actionEl.closest(".sidebar-user"));
+  if (state.userMenuOpen && !isUserMenuClick && action !== "toggle-sidebar") {
+    state.userMenuOpen = false;
+    document.querySelector(".sidebar-user-menu")?.remove();
+    document.querySelector(".sidebar-user-trigger")?.setAttribute("aria-expanded", "false");
+  }
+  if (action === "close-error-popup") {
+    state.errorDialog = null;
+    render();
+    return;
+  }
+  if (action === "close-confirm-popup") {
+    state.confirmDialog = null;
+    render();
+    return;
+  }
   if (action === "home") setScreen("landing");
   if (action === "open-auth-modal") {
     state.authModalOpen = true;
@@ -1846,7 +1996,13 @@ app.addEventListener("click", async (event) => {
   }
   if (action === "toggle-sidebar") {
     state.sidebarOpen = !state.sidebarOpen;
+    state.userMenuOpen = false;
+    applySidebarOpenState();
+  }
+  if (action === "toggle-user-menu") {
+    state.userMenuOpen = !state.userMenuOpen;
     render();
+    return;
   }
   if (action === "toggle-auth") {
     state.authMode = state.authMode === "login" ? "register" : "login";
@@ -1857,13 +2013,25 @@ app.addEventListener("click", async (event) => {
     await handleAuthAction(action);
   }
   if (action === "logout") {
+    state.userMenuOpen = false;
+    showConfirmPopup({
+      title: "Log out?",
+      message: "You will return to the public landing page.",
+      confirmAction: "confirm-logout",
+      confirmLabel: "Log out",
+    });
+    return;
+  }
+  if (action === "confirm-logout") {
+    state.confirmDialog = null;
+    state.userMenuOpen = false;
     if (firebaseAuth) {
       state.authLoading = true;
       render();
       try {
         await firebaseAuth.signOut();
       } catch (error) {
-        toast(friendlyFirebaseError(error));
+        showErrorPopup(friendlyFirebaseError(error), "Logout error");
       }
     }
     state.isAuthenticated = false;

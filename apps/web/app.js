@@ -43,7 +43,7 @@ const pipelineSteps = [
   "Preparing investor room",
 ];
 
-const pipelineStepDelays = [900, 1150, 1250, 1350, 1500, 1650];
+const pipelineStepDelays = [1200, 1500, 1800, 2100, 2400, 2700];
 const pipelineCompletePauseMs = 520;
 const agentStageByProgress = [0, 1, 2, 3, 3, 4, 4];
 

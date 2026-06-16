@@ -50,6 +50,64 @@ Pricing is presentational and subject to change before commercial release.
 
 ## Backend Configuration
 
+### Firebase Account Provisioning
+
+Protected API routes use Firebase Auth, Firestore account documents, and custom claims. In the Firebase Console, enable the Email/Password sign-in provider before testing login and registration.
+
+The backend needs these environment variables:
+
+```env
+FIREBASE_PROJECT_ID=your-firebase-project-id
+FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
+FEATURE_GATE_MODE=firestore
+```
+
+`FIREBASE_SERVICE_ACCOUNT_JSON` can be either the full service account JSON string or a path to the JSON file on the server.
+
+For existing Firebase Auth users, run the admin provisioning script from `apps/api`:
+
+```powershell
+python scripts/provision_firebase_accounts.py provision --all --dry-run
+python scripts/provision_firebase_accounts.py provision --all
+```
+
+You can also provision one user:
+
+```powershell
+python scripts/provision_firebase_accounts.py provision --email user@example.com
+python scripts/provision_firebase_accounts.py provision --uid firebase-auth-uid
+```
+
+The script creates `users/{uid}`, creates a free `accounts/{accountId}` document when missing, and sets custom claims:
+
+```json
+{
+  "accountId": "acc_xxx",
+  "role": "owner",
+  "plan": "free"
+}
+```
+
+Existing account documents are kept intact, so rerunning provisioning will not reset an upgraded account back to Free.
+
+Manual upgrades can be applied with:
+
+```powershell
+python scripts/provision_firebase_accounts.py upgrade --account-id acc_xxx --plan starter
+python scripts/provision_firebase_accounts.py upgrade --account-id acc_xxx --plan team
+python scripts/provision_firebase_accounts.py upgrade --account-id acc_xxx --plan studio
+python scripts/provision_firebase_accounts.py upgrade --account-id acc_xxx --plan enterprise
+```
+
+After custom claims change, the user must log out and log in again, or the frontend must fetch a fresh Firebase ID token. Otherwise the old token may not include the latest `accountId`, `role`, or `plan`.
+
+Verification checklist:
+
+- Login as an existing user and confirm `/me` returns `account.plan`.
+- On Free, upload papers until the 2 total analyses quota is reached.
+- Confirm the third analysis shows the paywall.
+- Upgrade the account in Firestore and refresh the token/login to see the new features.
+
 The API stores uploaded documents, generated memo exports, and optional ElevenLabs audio in an S3-compatible bucket. For AWS S3, create a private bucket and configure the backend environment in `apps/api/.env`:
 
 ```env

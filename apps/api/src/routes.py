@@ -1,11 +1,23 @@
 from __future__ import annotations
 
 import hashlib
+from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, Header, HTTPException, UploadFile
 
+from .auth import AuthContext, authenticate_request
 from .config import get_settings
+from .entitlements import (
+    account_payload,
+    has_feature,
+    increment_usage,
+    list_saved_sessions,
+    require_feature,
+    require_quota,
+    save_session_if_allowed,
+)
+from .plans import plans_payload
 from .schemas import (
     AgentTrace,
     DocumentAnalyzeResponse,
@@ -41,6 +53,31 @@ async def health() -> HealthResponse:
     return HealthResponse(ok=True, service="spinout-engine-api", env=settings.APP_ENV)
 
 
+@router.get("/plans")
+async def plans() -> dict:
+    return plans_payload()
+
+
+@router.get("/me")
+async def me(authorization: str | None = Header(default=None)) -> dict:
+    ctx = _auth_context(authorization)
+    return account_payload(ctx)
+
+
+@router.get("/sessions")
+async def list_sessions(authorization: str | None = Header(default=None)) -> dict:
+    ctx = _auth_context(authorization)
+    sessions = list_saved_sessions(ctx)
+    if not sessions:
+        sessions = [
+            session
+            for session in SESSION_STORE.values()
+            if session.get("accountId") == ctx.account_id and session.get("memo")
+        ]
+        sessions.sort(key=lambda item: str(item.get("createdAt") or ""), reverse=True)
+    return {"sessions": sessions[:20]}
+
+
 @router.post("/demo/analyze", response_model=DocumentAnalyzeResponse)
 async def demo_analyze() -> DocumentAnalyzeResponse:
     session_id = str(uuid4())
@@ -60,8 +97,14 @@ async def demo_analyze() -> DocumentAnalyzeResponse:
 
 
 @router.post("/documents/analyze", response_model=DocumentAnalyzeResponse)
-async def analyze_uploaded_document(file: UploadFile = File(...)) -> DocumentAnalyzeResponse:
+async def analyze_uploaded_document(
+    file: UploadFile = File(...),
+    authorization: str | None = Header(default=None),
+) -> DocumentAnalyzeResponse:
     settings = get_settings()
+    ctx = _auth_context(authorization)
+    require_feature(ctx, "document_analysis")
+    require_quota(ctx, "analyses")
     session_id = str(uuid4())
     storage = StorageService(settings)
     storage_traces: list[AgentTrace] = []
@@ -111,18 +154,35 @@ async def analyze_uploaded_document(file: UploadFile = File(...)) -> DocumentAna
         )
     except AIProviderError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+    increment_usage(ctx, "analyses")
     response.agentTraces.extend(storage_traces)
     output_keys = _save_outputs_if_configured(response=response, storage=storage)
 
     session_payload = response.model_dump(mode="json", by_alias=True)
-    session_payload["objects"] = {"upload": upload_key, **output_keys}
+    session_payload.update(
+        {
+            "accountId": ctx.account_id,
+            "userId": ctx.user_id,
+            "plan": ctx.account.get("plan"),
+            "filename": filename,
+            "createdAt": _now_iso(),
+            "objects": {"upload": upload_key, **output_keys},
+        }
+    )
     SESSION_STORE[session_id] = session_payload
+    save_session_if_allowed(ctx, session_payload)
     return response
 
 
 @router.post("/investor/question", response_model=InvestorQuestionResponse)
-async def investor_question(request: InvestorQuestionRequest) -> InvestorQuestionResponse:
+async def investor_question(
+    request: InvestorQuestionRequest,
+    authorization: str | None = Header(default=None),
+) -> InvestorQuestionResponse:
     settings = get_settings()
+    ctx = _auth_context(authorization)
+    require_feature(ctx, "investor_room_text")
+    _ensure_session_access(ctx, request.sessionId)
     persona = _persona_for_mode(request.mode)
     question = _generate_investor_question(
         memo=request.memo,
@@ -130,19 +190,33 @@ async def investor_question(request: InvestorQuestionRequest) -> InvestorQuestio
         persona=persona,
         settings=settings,
     )
-    session = SESSION_STORE.setdefault(request.sessionId, {"sessionId": request.sessionId})
+    session = SESSION_STORE.setdefault(
+        request.sessionId,
+        {
+            "sessionId": request.sessionId,
+            "accountId": ctx.account_id,
+            "userId": ctx.user_id,
+            "plan": ctx.account.get("plan"),
+            "createdAt": _now_iso(),
+        },
+    )
+    session.setdefault("accountId", ctx.account_id)
+    session.setdefault("userId", ctx.user_id)
+    session.setdefault("plan", ctx.account.get("plan"))
     asked = session.setdefault("investorQuestionsAsked", [])
     question_number = len(asked) + 1
     asked.append({"mode": request.mode, "question": question})
 
-    audio_payload = ElevenLabsService(
-        settings=settings,
-        storage=StorageService(settings),
-    ).generate_investor_audio(
-        text=question,
-        session_id=request.sessionId,
-        question_number=question_number,
-    )
+    audio_payload = {}
+    if has_feature(ctx.account, "audio_investor_room"):
+        audio_payload = ElevenLabsService(
+            settings=settings,
+            storage=StorageService(settings),
+        ).generate_investor_audio(
+            text=question,
+            session_id=request.sessionId,
+            question_number=question_number,
+        )
     return InvestorQuestionResponse(
         question=question,
         investorPersona=persona,
@@ -151,20 +225,81 @@ async def investor_question(request: InvestorQuestionRequest) -> InvestorQuestio
 
 
 @router.post("/investor/answer", response_model=InvestorAnswerResponse)
-async def investor_answer(request: InvestorAnswerRequest) -> InvestorAnswerResponse:
+async def investor_answer(
+    request: InvestorAnswerRequest,
+    authorization: str | None = Header(default=None),
+) -> InvestorAnswerResponse:
     settings = get_settings()
+    ctx = _auth_context(authorization)
+    require_feature(ctx, "investor_room_text")
+    _ensure_session_access(ctx, request.sessionId)
     response = _evaluate_investor_answer(request=request, settings=settings)
-    session = SESSION_STORE.setdefault(request.sessionId, {"sessionId": request.sessionId})
+    session = SESSION_STORE.setdefault(
+        request.sessionId,
+        {
+            "sessionId": request.sessionId,
+            "accountId": ctx.account_id,
+            "userId": ctx.user_id,
+            "plan": ctx.account.get("plan"),
+            "createdAt": _now_iso(),
+        },
+    )
+    session.setdefault("accountId", ctx.account_id)
+    session.setdefault("userId", ctx.user_id)
+    session.setdefault("plan", ctx.account.get("plan"))
     session.setdefault("investorAnswers", []).append(response.model_dump(mode="json"))
     return response
 
 
 @router.get("/sessions/{session_id}")
-async def get_session(session_id: str) -> dict:
+async def get_session(session_id: str, authorization: str | None = Header(default=None)) -> dict:
+    ctx = _auth_context(authorization)
     session = SESSION_STORE.get(session_id)
     if not session:
+        firestore_session = _get_saved_session(ctx, session_id)
+        if firestore_session:
+            return firestore_session
         raise HTTPException(status_code=404, detail="Session not found")
+    if session.get("accountId") and session.get("accountId") != ctx.account_id:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "feature_locked",
+                "message": "This session belongs to another account.",
+            },
+        )
     return session
+
+
+def _auth_context(authorization: str | None) -> AuthContext:
+    return authenticate_request(authorization, get_settings())
+
+
+def _ensure_session_access(ctx: AuthContext, session_id: str) -> None:
+    session = SESSION_STORE.get(session_id)
+    if not session:
+        return
+    account_id = session.get("accountId")
+    if account_id and account_id != ctx.account_id:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "feature_locked",
+                "message": "This session belongs to another account.",
+            },
+        )
+
+
+def _get_saved_session(ctx: AuthContext, session_id: str) -> dict | None:
+    try:
+        doc = ctx.account_ref.collection("sessions").document(session_id).get()
+        return doc.to_dict() if doc.exists else None
+    except Exception:
+        return None
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 def _save_outputs_if_configured(

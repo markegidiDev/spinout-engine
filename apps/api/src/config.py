@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     ELEVENLABS_VOICE_ID: str = ""
     ELEVENLABS_TTS_MODEL: str = "eleven_flash_v2_5"
 
+    FIREBASE_PROJECT_ID: str = ""
+    FIREBASE_SERVICE_ACCOUNT_JSON: str = ""
+    FEATURE_GATE_MODE: str = "firestore"
+
     S3_ENDPOINT: str = "https://s3.fr-par.scw.cloud"
     S3_REGION: str = "fr-par"
     S3_BUCKET: str = ""

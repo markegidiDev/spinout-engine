@@ -33,6 +33,85 @@ const palette = {
   errorSurf: "rgba(147,0,10,.2)",
 };
 
+const planOrder = ["free", "starter", "team", "studio", "enterprise"];
+const localPlans = {
+  free: {
+    key: "free",
+    name: "Free",
+    price: "$0",
+    audience: "For testing the concept.",
+    highlighted: false,
+    features: ["2 paper analyses total", "Memo preview", "Readiness snapshot", "Demo investor questions", "No exports", "No saved history"],
+    quotas: { analysesTotal: 2, analysesPerMonth: 0, seats: 1 },
+  },
+  starter: {
+    key: "starter",
+    name: "Starter",
+    price: "$39/mo",
+    audience: "For solo founders, PhD students, and early spinout teams.",
+    highlighted: false,
+    features: ["25 analyses per month", "Full venture memo", "Readiness score with risk breakdown", "Text Investor Room Q&A", "Markdown export", "Saved project history", "Basic competitor prompts"],
+    quotas: { analysesPerMonth: 25, seats: 1 },
+  },
+  team: {
+    key: "team",
+    name: "Team",
+    price: "$149/mo",
+    audience: "For labs, startup teams, and accelerator cohorts.",
+    highlighted: true,
+    features: ["100 analyses per month", "Multi-document project analysis", "PDF export", "Shared workspace for 3 seats", "Investor personas: VC, grant reviewer, sponsor", "Competitor and wedge deep-dive", "Milestone roadmap", "Priority processing"],
+    quotas: { analysesPerMonth: 100, seats: 3 },
+  },
+  studio: {
+    key: "studio",
+    name: "Premium / Studio",
+    price: "$499/mo",
+    audience: "For tech-transfer offices, venture studios, and sponsor reviews.",
+    highlighted: false,
+    features: ["500 analyses per month", "Portfolio dashboard", "Compare spinout opportunities across projects", "Custom scoring rubric", "Sponsor-ready PDF reports", "Team workspace for 10 seats", "Audio-enabled Investor Room", "Exportable portfolio review summaries"],
+    quotas: { analysesPerMonth: 500, seats: 10 },
+  },
+  enterprise: {
+    key: "enterprise",
+    name: "Enterprise",
+    price: "Custom",
+    audience: "For universities, research institutes, and corporate R&D.",
+    highlighted: false,
+    features: ["Custom analysis volume", "SSO", "Dedicated workspace", "Custom report templates", "Internal review workflows", "Admin dashboard", "Security review support", "Annual contract"],
+    quotas: { analysesPerMonth: null, seats: null },
+  },
+};
+
+const featureRequirements = {
+  document_analysis: "free",
+  investor_room_text: "starter",
+  markdown_export: "starter",
+  saved_history: "starter",
+  pdf_export: "team",
+  multi_document_analysis: "team",
+  investor_personas: "team",
+  competitor_wedge_deep_dive: "team",
+  audio_investor_room: "studio",
+  portfolio_dashboard: "studio",
+  custom_scoring_rubric: "studio",
+  portfolio_review_export: "studio",
+};
+
+const featureLabels = {
+  document_analysis: "Document analysis",
+  investor_room_text: "Investor Room",
+  markdown_export: "Markdown export",
+  saved_history: "Saved history",
+  pdf_export: "PDF export",
+  multi_document_analysis: "Multi-document analysis",
+  investor_personas: "Investor personas",
+  competitor_wedge_deep_dive: "Competitor and wedge deep-dive",
+  audio_investor_room: "Audio Investor Room",
+  portfolio_dashboard: "Portfolio dashboard",
+  custom_scoring_rubric: "Custom scoring rubric",
+  portfolio_review_export: "Portfolio review export",
+};
+
 const pipelineSteps = [
   "Ingesting document",
   "Extracting technical novelty",
@@ -219,9 +298,18 @@ const state = {
   authError: null,
   userId: "",
   userEmail: "",
+  authToken: "",
+  account: null,
+  features: [],
+  quotas: {},
+  usage: {},
+  plans: { order: planOrder, plans: localPlans, featureLabels },
+  accountLoading: false,
+  accountError: null,
   sidebarOpen: false,
   userMenuOpen: false,
   authModalOpen: false,
+  paywallDialog: null,
   recentChats: [],
   analysisProgress: 0,
   analysisError: null,
@@ -307,6 +395,193 @@ function showConfirmPopup({ title, message, confirmAction, confirmLabel = "Confi
   render();
 }
 
+function apiUrl(path) {
+  return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+async function getAuthToken(forceRefresh = false) {
+  const user = firebaseAuth?.currentUser;
+  if (!user?.getIdToken) return "";
+  state.authToken = await user.getIdToken(forceRefresh);
+  return state.authToken;
+}
+
+async function apiFetch(path, options = {}) {
+  const { auth = true, handleGate = true, ...fetchOptions } = options;
+  const headers = new Headers(fetchOptions.headers || {});
+  if (auth) {
+    const token = await getAuthToken();
+    if (!token) {
+      const error = new Error("Authentication required");
+      error.status = 401;
+      error.payload = { detail: { code: "auth_required", message: "Log in to use this feature." } };
+      if (handleGate) handleApiGate(error);
+      throw error;
+    }
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  const response = await fetch(apiUrl(path), { ...fetchOptions, headers });
+  if (response.ok) return response;
+
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = { detail: { message: `${response.status} ${response.statusText}` } };
+  }
+  const error = new Error(readApiMessage(payload, response.statusText));
+  error.status = response.status;
+  error.payload = payload;
+  if (handleGate && [401, 402, 403].includes(response.status)) {
+    handleApiGate(error);
+  }
+  throw error;
+}
+
+function readApiMessage(payload, fallback = "Request failed") {
+  const detail = payload?.detail;
+  if (typeof detail === "string") return detail;
+  return detail?.message || fallback;
+}
+
+function handleApiGate(error) {
+  const detail = error.payload?.detail || {};
+  if (error.status === 401 || detail.code === "auth_required") {
+    state.authModalOpen = true;
+    state.authError = detail.message || "Log in to use this feature.";
+    render();
+    return;
+  }
+  if (detail.code === "quota_exceeded" || detail.code === "feature_locked") {
+    showPaywall({
+      feature: detail.feature,
+      requiredPlan: detail.requiredPlan,
+      message: detail.message,
+    });
+  }
+}
+
+async function loadPlans() {
+  try {
+    const response = await apiFetch("/plans", { auth: false, handleGate: false });
+    const payload = await response.json();
+    if (payload?.plans) state.plans = payload;
+  } catch {
+    state.plans = { order: planOrder, plans: localPlans, featureLabels };
+  }
+}
+
+async function loadAccount() {
+  if (!state.isAuthenticated || !firebaseAuth?.currentUser) return;
+  state.accountLoading = true;
+  state.accountError = null;
+  try {
+    const response = await apiFetch("/me", { auth: true, handleGate: false });
+    const payload = await response.json();
+    applyAccountPayload(payload);
+    await loadSavedSessions();
+  } catch (error) {
+    state.account = null;
+    state.features = [];
+    state.quotas = {};
+    state.usage = {};
+    state.accountError = readApiMessage(error.payload, "Account settings are unavailable.");
+  } finally {
+    state.accountLoading = false;
+    render();
+  }
+}
+
+function applyAccountPayload(payload) {
+  const account = payload?.account || null;
+  state.account = account;
+  state.features = Array.isArray(account?.features) ? account.features : [];
+  state.quotas = account?.quotas || {};
+  state.usage = account?.usage || {};
+}
+
+async function loadSavedSessions() {
+  if (!hasFeature("saved_history")) return;
+  try {
+    const response = await apiFetch("/sessions", { auth: true, handleGate: false });
+    const payload = await response.json();
+    state.recentChats = (payload.sessions || [])
+      .filter((item) => item.sessionId && item.memo)
+      .map((item) => ({
+        sessionId: item.sessionId,
+        title: item.memo?.title || item.memo?.oneLineCompany || "Untitled analysis",
+        result: item,
+        createdAt: item.createdAt || new Date().toISOString(),
+      }))
+      .slice(0, 8);
+  } catch {
+    state.recentChats = [];
+  }
+}
+
+function hasFeature(feature) {
+  return state.features.includes(feature);
+}
+
+function requireClientFeature(feature) {
+  if (!state.isAuthenticated) {
+    state.authModalOpen = true;
+    state.authError = "Log in to use this feature.";
+    render();
+    return false;
+  }
+  if (!state.account && !["document_analysis"].includes(feature)) {
+    showPaywall({
+      feature,
+      requiredPlan: requiredPlanForFeature(feature),
+      message: state.accountError || "Account settings are unavailable.",
+    });
+    return false;
+  }
+  if (!hasFeature(feature)) {
+    showPaywall({ feature, requiredPlan: requiredPlanForFeature(feature) });
+    return false;
+  }
+  return true;
+}
+
+function requiredPlanForFeature(feature) {
+  return featureRequirements[feature] || "starter";
+}
+
+function showPaywall({ feature, requiredPlan, message } = {}) {
+  const plan = requiredPlan || requiredPlanForFeature(feature);
+  const label = featureLabels[feature] || "This feature";
+  state.paywallDialog = {
+    feature,
+    requiredPlan: plan,
+    title: feature ? `${label} is locked` : `Upgrade to ${planName(plan)}`,
+    message: message || `${label} is available on ${planName(plan)}.`,
+  };
+  render();
+}
+
+function planName(plan) {
+  return state.plans?.plans?.[plan]?.name || localPlans[plan]?.name || plan || "a paid plan";
+}
+
+function usageText() {
+  if (!state.account) return state.accountLoading ? "Loading plan..." : "No plan loaded";
+  const totalLimit = state.quotas.analysesTotal;
+  const monthlyLimit = state.quotas.analysesPerMonth;
+  if (totalLimit) return `${state.usage.analysesTotalUsed || 0} / ${totalLimit} analyses total`;
+  if (monthlyLimit === null || monthlyLimit === undefined) return "Unlimited analyses";
+  return `${state.usage.analysesUsed || 0} / ${monthlyLimit} analyses this month`;
+}
+
+function planButtonLabel(plan) {
+  if (!state.isAuthenticated) return plan === "enterprise" ? "Contact sales" : plan === "free" ? "Start free" : `Choose ${planName(plan)}`;
+  const currentRank = planOrder.indexOf(state.account?.plan || "free");
+  const targetRank = planOrder.indexOf(plan);
+  if (targetRank <= currentRank) return "Current or included";
+  return plan === "enterprise" ? "Contact sales" : `Upgrade to ${planName(plan)}`;
+}
+
 function initFirebaseAuth() {
   if (!isFirebaseConfigured) {
     firebaseInitError = "Firebase config missing";
@@ -322,17 +597,24 @@ function initFirebaseAuth() {
     const firebaseApp = window.firebase.apps?.length ? window.firebase.app() : window.firebase.initializeApp(firebaseConfig);
     firebaseAuth = firebaseApp.auth ? firebaseApp.auth() : window.firebase.auth();
     firebaseAuth.onAuthStateChanged(
-      (user) => {
+      async (user) => {
         state.authLoading = false;
         state.authError = null;
         if (user) {
           state.isAuthenticated = true;
           state.userId = user.uid;
           state.userEmail = user.email || user.displayName || "Firebase user";
+          await loadAccount();
         } else {
           state.isAuthenticated = false;
           state.userId = "";
           state.userEmail = "";
+          state.authToken = "";
+          state.account = null;
+          state.features = [];
+          state.quotas = {};
+          state.usage = {};
+          state.accountError = null;
           state.userMenuOpen = false;
         }
         render();
@@ -416,7 +698,9 @@ function topbar(active, options = {}) {
         .map((step) => `<span class="workflow-step ${active === step ? "active" : ""}">${step}</span>`)
         .join('<span class="workflow-separator" aria-hidden="true">&rsaquo;</span>')}
     </div>
-    <div class="session-id">${escapeHtml(currentSessionId())}</div>
+    <div class="topbar-account">
+      ${state.isAuthenticated ? `<span class="chip primary">${escapeHtml(planName(state.account?.plan || "free"))}</span><span class="session-id">${escapeHtml(usageText())}</span>` : `<span class="session-id">${escapeHtml(currentSessionId())}</span>`}
+    </div>
   </header>`;
 }
 
@@ -642,96 +926,7 @@ function renderLanding() {
         <h2>Choose the right depth of commercialization review.</h2>
         <p>Start with a limited memo preview, then scale into saved history, team workspaces, sponsor-ready reports, and portfolio review.</p>
       </div>
-      <div class="pricing-grid">
-        <article class="pricing-card">
-          <div class="plan-top">
-            <h3>Free</h3>
-            <div class="plan-price">$0</div>
-          </div>
-          <p class="plan-audience">For testing the concept.</p>
-          <ul>
-            <li>2 paper analyses total</li>
-            <li>Memo preview</li>
-            <li>Readiness snapshot</li>
-            <li>Demo investor questions</li>
-            <li>No exports</li>
-            <li>No saved history</li>
-          </ul>
-          <button class="btn primary full" data-action="go-upload">Start free</button>
-        </article>
-        <article class="pricing-card">
-          <div class="plan-top">
-            <h3>Starter</h3>
-            <div class="plan-price">$39<span>/mo</span></div>
-          </div>
-          <p class="plan-audience">For solo founders, PhD students, and early spinout teams.</p>
-          <ul>
-            <li>25 analyses per month</li>
-            <li>Full venture memo</li>
-            <li>Readiness score with risk breakdown</li>
-            <li>Text Investor Room Q&amp;A</li>
-            <li>Markdown export</li>
-            <li>Saved project history</li>
-            <li>Basic competitor prompts</li>
-          </ul>
-          <button class="btn primary full" data-action="open-auth-modal">Choose Starter</button>
-        </article>
-        <article class="pricing-card highlighted">
-          <div class="plan-badge">Most useful</div>
-          <div class="plan-top">
-            <h3>Team</h3>
-            <div class="plan-price">$149<span>/mo</span></div>
-          </div>
-          <p class="plan-audience">For labs, startup teams, and accelerator cohorts.</p>
-          <ul>
-            <li>100 analyses per month</li>
-            <li>Multi-document project analysis</li>
-            <li>PDF export</li>
-            <li>Shared workspace for 3 seats</li>
-            <li>Investor personas: VC, grant reviewer, sponsor</li>
-            <li>Competitor and wedge deep-dive</li>
-            <li>Milestone roadmap</li>
-            <li>Priority processing</li>
-          </ul>
-          <button class="btn primary full" data-action="open-auth-modal">Choose Team</button>
-        </article>
-        <article class="pricing-card">
-          <div class="plan-top">
-            <h3>Premium / Studio</h3>
-            <div class="plan-price">$499<span>/mo</span></div>
-          </div>
-          <p class="plan-audience">For tech-transfer offices, venture studios, and sponsor reviews.</p>
-          <ul>
-            <li>500 analyses per month</li>
-            <li>Portfolio dashboard</li>
-            <li>Compare spinout opportunities across projects</li>
-            <li>Custom scoring rubric</li>
-            <li>Sponsor-ready PDF reports</li>
-            <li>Team workspace for 10 seats</li>
-            <li>Audio-enabled Investor Room when configured</li>
-            <li>Exportable portfolio review summaries</li>
-          </ul>
-          <button class="btn primary full" data-action="open-auth-modal">Choose Studio</button>
-        </article>
-        <article class="pricing-card">
-          <div class="plan-top">
-            <h3>Enterprise</h3>
-            <div class="plan-price custom-price">Custom</div>
-          </div>
-          <p class="plan-audience">For universities, research institutes, and corporate R&amp;D.</p>
-          <ul>
-            <li>Custom analysis volume</li>
-            <li>SSO</li>
-            <li>Dedicated workspace</li>
-            <li>Custom report templates</li>
-            <li>Internal review workflows</li>
-            <li>Admin dashboard</li>
-            <li>Security review support</li>
-            <li>Annual contract</li>
-          </ul>
-          <button class="btn primary full" data-action="open-auth-modal">Contact sales</button>
-        </article>
-      </div>
+      ${renderPricingCards()}
     </section>
     <section class="landing-section built-section">
       <div class="section-kicker">Built for</div>
@@ -776,6 +971,32 @@ function renderLanding() {
   </main>`;
 }
 
+function renderPricingCards() {
+  return html`<div class="pricing-grid">
+    ${planOrder.map((plan) => renderPricingCard(plan)).join("")}
+  </div>`;
+}
+
+function renderPricingCard(planKey) {
+  const plan = localPlans[planKey];
+  const isCurrent = state.isAuthenticated && (state.account?.plan || "free") === planKey;
+  const currentRank = planOrder.indexOf(state.account?.plan || "free");
+  const targetRank = planOrder.indexOf(planKey);
+  const isIncluded = state.isAuthenticated && targetRank < currentRank;
+  const price = plan.price.includes("/") ? `${plan.price.split("/")[0]}<span>/${plan.price.split("/")[1]}</span>` : plan.price;
+  return html`<article class="pricing-card ${plan.highlighted ? "highlighted" : ""} ${isCurrent ? "current-plan" : ""}">
+    ${plan.highlighted ? `<div class="plan-badge">Most useful</div>` : ""}
+    ${isCurrent ? `<div class="plan-badge current">Current plan</div>` : ""}
+    <div class="plan-top">
+      <h3>${escapeHtml(plan.name)}</h3>
+      <div class="plan-price ${planKey === "enterprise" ? "custom-price" : ""}">${price}</div>
+    </div>
+    <p class="plan-audience">${escapeHtml(plan.audience)}</p>
+    <ul>${plan.features.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+    <button class="btn primary full" data-action="choose-plan" data-plan="${planKey}" ${isCurrent || isIncluded ? "disabled" : ""}>${escapeHtml(planButtonLabel(planKey))}</button>
+  </article>`;
+}
+
 function renderAuthPanel() {
   if (state.isAuthenticated) {
     return html`<div class="auth-card card">
@@ -784,7 +1005,12 @@ function renderAuthPanel() {
           <div class="section-label">Workspace</div>
           <strong>${escapeHtml(state.userEmail || "Founder workspace")}</strong>
         </div>
-        <span class="chip primary">Firebase account</span>
+        <span class="chip primary">${escapeHtml(planName(state.account?.plan || "free"))}</span>
+      </div>
+      <div class="usage-card">
+        <span class="section-label">Usage</span>
+        <strong>${escapeHtml(usageText())}</strong>
+        ${state.accountError ? `<p class="muted">${escapeHtml(state.accountError)}</p>` : ""}
       </div>
       <div class="recent-mini">
         ${state.recentChats.length ? state.recentChats.slice(0, 3).map((chat, index) => `<button class="recent-mini-row" data-action="open-chat" data-chat-index="${index}">${escapeHtml(chat.title)}</button>`).join("") : `<span class="muted">No recent analyses yet</span>`}
@@ -1385,6 +1611,27 @@ function renderAuthModal() {
   </div>`;
 }
 
+function renderPaywallDialog() {
+  if (!state.paywallDialog) return "";
+  const requiredPlan = state.paywallDialog.requiredPlan || "starter";
+  const isEnterprise = requiredPlan === "enterprise";
+  return html`<div class="paywall-backdrop" role="presentation">
+    <section class="paywall-card" role="dialog" aria-modal="true" aria-labelledby="paywall-title" aria-describedby="paywall-message">
+      <div class="paywall-icon">${iconSpark(18)}</div>
+      <div class="paywall-copy">
+        <div class="section-label">Upgrade required</div>
+        <h2 id="paywall-title">${escapeHtml(state.paywallDialog.title)}</h2>
+        <p id="paywall-message">${escapeHtml(state.paywallDialog.message)}</p>
+        <span class="chip primary">Required: ${escapeHtml(planName(requiredPlan))}</span>
+      </div>
+      <div class="paywall-actions">
+        <button class="btn full" data-action="close-paywall">Not now</button>
+        <button class="btn primary full" data-action="${isEnterprise ? "contact-sales" : "view-pricing"}">${isEnterprise ? "Contact sales" : "View pricing"}</button>
+      </div>
+    </section>
+  </div>`;
+}
+
 function renderToasts() {
   return html`<div class="toast-stack">${state.toasts.map((item) => `<div class="toast">${escapeHtml(item.message)}</div>`).join("")}</div>`;
 }
@@ -1433,7 +1680,7 @@ function render() {
             : state.screen === "investor"
               ? renderInvestor()
               : renderFinal();
-  app.innerHTML = `<div class="app-shell with-sidebar">${renderToasts()}${renderSidebar(content)}${renderAuthModal()}${renderErrorDialog()}${renderConfirmDialog()}</div>`;
+  app.innerHTML = `<div class="app-shell with-sidebar">${renderToasts()}${renderSidebar(content)}${renderAuthModal()}${renderPaywallDialog()}${renderErrorDialog()}${renderConfirmDialog()}</div>`;
   if (state.errorDialog || state.confirmDialog) {
     requestAnimationFrame(() => {
       document.querySelector('[autofocus]')?.focus();
@@ -1457,7 +1704,11 @@ function renderSidebar(content) {
         </div>
         <div class="chat-list">
           ${
-            state.recentChats.length
+            !hasFeature("saved_history")
+              ? `<div class="empty-chat sidebar-label-stack">
+                  <span class="sidebar-fade-label label-open">History on Starter</span>
+                </div>`
+              : state.recentChats.length
               ? state.recentChats
                   .map(
                     (chat, index) => `<button class="chat-row ${state.result?.sessionId === chat.sessionId ? "active" : ""}" data-action="open-chat" data-chat-index="${index}">
@@ -1476,7 +1727,7 @@ function renderSidebar(content) {
           state.isAuthenticated
             ? `<button class="sidebar-user-trigger" data-action="toggle-user-menu" aria-haspopup="menu" aria-expanded="${state.userMenuOpen ? "true" : "false"}">
                 <span class="avatar-mini">${escapeHtml((state.userEmail || "S").slice(0, 1).toUpperCase())}</span>
-                <span class="sidebar-email">${escapeHtml(state.userEmail || "Workspace")}</span>
+                <span class="sidebar-email">${escapeHtml(planName(state.account?.plan || "free"))} - ${escapeHtml(usageText())}</span>
               </button>
               ${
                 state.userMenuOpen
@@ -1541,6 +1792,9 @@ async function startAnalysis(useFile) {
     render();
     return;
   }
+  if (useFile && !requireClientFeature("document_analysis")) {
+    return;
+  }
   if (state.screen === "landing" && !state.sidebarOpen) {
     state.sidebarOpen = true;
   }
@@ -1596,7 +1850,9 @@ async function runPipeline() {
     state.analysisPromise = null;
     state.pendingSessionId = null;
     state.screen = "upload";
-    showErrorPopup(state.analysisError);
+    if (![401, 402, 403].includes(failure.status)) {
+      showErrorPopup(state.analysisError);
+    }
     render();
     return;
   }
@@ -1611,6 +1867,9 @@ async function runPipeline() {
   state.screen = "dashboard";
   if (state.result) {
     rememberCurrentAnalysis();
+  }
+  if (state.isAuthenticated) {
+    await loadAccount();
   }
   render();
   resetViewportScroll();
@@ -1633,6 +1892,7 @@ function setPipelineProgress(progress) {
 
 function rememberCurrentAnalysis() {
   if (!state.result?.sessionId || !state.result?.memo) return;
+  if (!hasFeature("saved_history")) return;
   const entry = {
     sessionId: state.result.sessionId,
     title: state.result.memo.title || state.result.memo.oneLineCompany || "Untitled analysis",
@@ -1655,7 +1915,7 @@ async function analyzeDemo() {
 async function analyzeFile(file) {
   const formData = new FormData();
   formData.append("file", file);
-  const response = await fetch(`${API_BASE}/documents/analyze`, { method: "POST", body: formData });
+  const response = await apiFetch("/documents/analyze", { method: "POST", body: formData });
   if (!response.ok) {
     let detail = "Document analyze failed";
     try {
@@ -1670,6 +1930,7 @@ async function analyzeFile(file) {
 }
 
 async function enterInvestorRoom() {
+  if (!requireClientFeature("investor_room_text")) return;
   state.screen = "investor";
   render();
   resetViewportScroll();
@@ -1697,7 +1958,7 @@ async function loadInvestorQuestion({ advance }) {
   state.voiceLoading = true;
   render();
   try {
-    const response = await fetch(`${API_BASE}/investor/question`, {
+    const response = await apiFetch("/investor/question", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId: currentSessionId(), memo, mode: "skeptical_vc" }),
@@ -1706,28 +1967,28 @@ async function loadInvestorQuestion({ advance }) {
       state.voiceLoading = false;
       return;
     }
-    if (response.ok) {
-      const payload = await response.json();
-      if (state.screen !== "investor") {
-        state.voiceLoading = false;
-        return;
-      }
-      state.currentQuestion = payload.question || memo.investorQuestions?.[state.questionIndex] || demoResponse.memo.investorQuestions[state.questionIndex];
-      state.currentPersona = payload.investorPersona;
-      state.currentAudio = {
-        url: payload.audioUrl || null,
-        base64: payload.audioBase64 || null,
-      };
-      state.voiceLoading = false;
-      render();
-      await playInvestorAudio(state.currentAudio);
-    } else {
-      state.currentQuestion = memo.investorQuestions?.[state.questionIndex] || demoResponse.memo.investorQuestions[state.questionIndex];
-      state.currentAudio = null;
-    }
-  } catch {
+    const payload = await response.json();
     if (state.screen !== "investor") {
       state.voiceLoading = false;
+      return;
+    }
+    state.currentQuestion = payload.question || memo.investorQuestions?.[state.questionIndex] || demoResponse.memo.investorQuestions[state.questionIndex];
+    state.currentPersona = payload.investorPersona;
+    state.currentAudio = {
+      url: payload.audioUrl || null,
+      base64: payload.audioBase64 || null,
+    };
+    state.voiceLoading = false;
+    render();
+    await playInvestorAudio(state.currentAudio);
+  } catch (error) {
+    if (state.screen !== "investor") {
+      state.voiceLoading = false;
+      return;
+    }
+    if ([401, 402, 403].includes(error.status)) {
+      state.voiceLoading = false;
+      render();
       return;
     }
     state.currentQuestion = memo.investorQuestions?.[state.questionIndex] || demoResponse.memo.investorQuestions[state.questionIndex];
@@ -1807,14 +2068,18 @@ async function submitAnswer() {
   state.evaluation = null;
   render();
   try {
-    const response = await fetch(`${API_BASE}/investor/answer`, {
+    const response = await apiFetch("/investor/answer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId: currentSessionId(), question, answer, memo: currentMemo() }),
     });
-    if (!response.ok) throw new Error("Evaluation failed");
     state.evaluation = await response.json();
-  } catch {
+  } catch (error) {
+    if ([401, 402, 403].includes(error.status)) {
+      state.answerLoading = false;
+      render();
+      return;
+    }
     state.evaluation = localEvaluation(answer);
   } finally {
     state.answerLoading = false;
@@ -1958,6 +2223,7 @@ async function handleAuthAction(action) {
     state.isAuthenticated = true;
     state.userId = credential.user?.uid || "";
     state.userEmail = credential.user?.email || email;
+    await loadAccount();
     state.authModalOpen = false;
     state.sidebarOpen = true;
     state.screen = "upload";
@@ -1996,6 +2262,44 @@ app.addEventListener("click", async (event) => {
   if (action === "close-confirm-popup") {
     state.confirmDialog = null;
     render();
+    return;
+  }
+  if (action === "close-paywall") {
+    state.paywallDialog = null;
+    render();
+    return;
+  }
+  if (action === "view-pricing") {
+    state.paywallDialog = null;
+    setScreen("landing");
+    requestAnimationFrame(() => document.querySelector("#pricing")?.scrollIntoView({ block: "start", behavior: "smooth" }));
+    return;
+  }
+  if (action === "contact-sales") {
+    state.paywallDialog = null;
+    setScreen("landing");
+    requestAnimationFrame(() => document.querySelector("#pricing")?.scrollIntoView({ block: "start", behavior: "smooth" }));
+    toast("Enterprise upgrades are configured manually in Firebase for v1");
+    return;
+  }
+  if (action === "choose-plan") {
+    const plan = actionEl.dataset.plan || "starter";
+    if (!state.isAuthenticated) {
+      state.authModalOpen = true;
+      state.authError = null;
+      render();
+      return;
+    }
+    const currentRank = planOrder.indexOf(state.account?.plan || "free");
+    const targetRank = planOrder.indexOf(plan);
+    if (targetRank <= currentRank) {
+      setScreen("upload");
+      return;
+    }
+    showPaywall({
+      requiredPlan: plan,
+      message: `${planName(plan)} is assigned manually in Firestore for v1. Ask the Firebase admin to update this account plan.`,
+    });
     return;
   }
   if (action === "home") setScreen("landing");
@@ -2054,6 +2358,14 @@ app.addEventListener("click", async (event) => {
     state.isAuthenticated = false;
     state.userId = "";
     state.userEmail = "";
+    state.authToken = "";
+    state.account = null;
+    state.features = [];
+    state.quotas = {};
+    state.usage = {};
+    state.accountError = null;
+    state.paywallDialog = null;
+    state.recentChats = [];
     state.sidebarOpen = false;
     state.screen = "landing";
     state.authLoading = false;
@@ -2080,18 +2392,22 @@ app.addEventListener("click", async (event) => {
   if (action === "submit-answer") submitAnswer();
   if (action === "final") setScreen("final");
   if (action === "copy-memo") {
+    if (!requireClientFeature("markdown_export")) return;
     await navigator.clipboard?.writeText(markdownMemo());
     toast("Venture memo copied");
   }
   if (action === "download-md") {
+    if (!requireClientFeature("markdown_export")) return;
     download("spinout-memo.md", markdownMemo(), "text/markdown;charset=utf-8");
     toast("Markdown downloaded");
   }
   if (action === "download-json") {
+    if (!requireClientFeature("markdown_export")) return;
     download("spinout-memo.json", JSON.stringify(state.result || demoResponse, null, 2), "application/json");
     toast("JSON exported");
   }
   if (action === "save-report") {
+    if (!requireClientFeature("portfolio_review_export")) return;
     download("spinout-investor-report.md", `${markdownMemo()}\n\n## Evaluations\n${JSON.stringify(state.evalHistory, null, 2)}`, "text/markdown;charset=utf-8");
     toast("Investor report saved");
   }
@@ -2131,6 +2447,7 @@ app.addEventListener("drop", (event) => {
   render();
 });
 
+loadPlans().then(() => render());
 initFirebaseAuth();
 
 document.addEventListener("keydown", (event) => {

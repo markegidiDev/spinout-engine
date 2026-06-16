@@ -174,6 +174,14 @@ input:focus-visible {
   color: var(--on-primary);
 }
 
+.topbar-account {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .status-dot {
   width: 7px;
   height: 7px;
@@ -424,6 +432,19 @@ input:focus-visible {
   background: var(--bg);
   color: var(--on-surface);
   padding: 0 13px;
+}
+
+.usage-card {
+  border: 1px solid var(--outline-variant);
+  border-radius: 16px;
+  padding: 12px;
+  background: var(--surface-variant);
+}
+
+.usage-card strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 13px;
 }
 
 .recent-mini {
@@ -783,6 +804,10 @@ input:focus-visible {
   background: color-mix(in srgb, var(--surface) 72%, var(--primary-container) 28%);
 }
 
+.pricing-card.current-plan {
+  border-color: var(--primary);
+}
+
 .plan-badge {
   align-self: flex-start;
   min-height: 24px;
@@ -794,6 +819,11 @@ input:focus-visible {
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.plan-badge.current {
+  background: var(--surface-variant);
+  color: var(--primary);
 }
 
 .plan-top {
@@ -2439,6 +2469,65 @@ code {
 }
 
 /* ── Topbar user section ── */
+.paywall-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 240;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
+  animation: modal-backdrop-in 200ms ease both;
+}
+
+.paywall-card {
+  width: min(460px, 100%);
+  border: 1px solid color-mix(in srgb, var(--primary) 48%, var(--outline-variant));
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.58);
+  padding: 24px;
+  display: grid;
+  gap: 16px;
+  animation: modal-card-in 240ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.paywall-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.paywall-copy {
+  display: grid;
+  gap: 9px;
+}
+
+.paywall-copy h2 {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.paywall-copy p {
+  margin: 0;
+  color: var(--on-surface-variant);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.paywall-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 @keyframes modal-backdrop-in {
   from { opacity: 0; }
   to { opacity: 1; }

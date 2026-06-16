@@ -10,4 +10,5 @@ requests
 boto3
 pypdf
 python-docx
+firebase-admin
 

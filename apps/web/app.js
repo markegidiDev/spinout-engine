@@ -99,6 +99,7 @@ const featureRequirements = {
 
 const featureLabels = {
   document_analysis: "Document analysis",
+  analyses: "Analysis quota",
   investor_room_text: "Investor Room",
   markdown_export: "Markdown export",
   saved_history: "Saved history",
@@ -572,6 +573,92 @@ function usageText() {
   if (totalLimit) return `${state.usage.analysesTotalUsed || 0} / ${totalLimit} analyses total`;
   if (monthlyLimit === null || monthlyLimit === undefined) return "Unlimited analyses";
   return `${state.usage.analysesUsed || 0} / ${monthlyLimit} analyses this month`;
+}
+
+function canStartDocumentAnalysis() {
+  if (!state.isAuthenticated) {
+    state.authModalOpen = true;
+    state.authError = "Log in to analyze a document.";
+    render();
+    return false;
+  }
+  if (state.accountLoading) {
+    showErrorPopup("Account settings are still loading. Try again in a moment.");
+    return false;
+  }
+  if (!state.account) {
+    showPaywall({
+      feature: "document_analysis",
+      requiredPlan: "free",
+      message: state.accountError || "Account settings are unavailable.",
+    });
+    return false;
+  }
+  if (!hasFeature("document_analysis")) {
+    showPaywall({ feature: "document_analysis", requiredPlan: requiredPlanForFeature("document_analysis") });
+    return false;
+  }
+
+  const quotaGate = analysisQuotaGate();
+  if (!quotaGate.ok) {
+    showPaywall({
+      feature: "analyses",
+      requiredPlan: quotaGate.requiredPlan,
+      message: quotaGate.message,
+    });
+    return false;
+  }
+  return true;
+}
+
+function analysisQuotaGate() {
+  const totalLimit = finiteNumber(state.quotas.analysesTotal);
+  const totalUsed = finiteNumber(state.usage.analysesTotalUsed) || 0;
+  if (totalLimit !== null && totalLimit > 0) {
+    if (totalUsed >= totalLimit) {
+      return {
+        ok: false,
+        requiredPlan: "starter",
+        message: `You have reached your ${totalLimit} free analyses. Upgrade to ${planName("starter")} to keep analyzing documents.`,
+      };
+    }
+    return { ok: true };
+  }
+
+  if (state.quotas.analysesPerMonth === null || state.quotas.analysesPerMonth === undefined) {
+    return { ok: true };
+  }
+
+  const monthlyLimit = finiteNumber(state.quotas.analysesPerMonth);
+  if (monthlyLimit === null) return { ok: true };
+
+  const monthlyUsed = usagePeriodIsCurrent() ? finiteNumber(state.usage.analysesUsed) || 0 : 0;
+  if (monthlyUsed >= monthlyLimit) {
+    const requiredPlan = nextPlanForQuota();
+    return {
+      ok: false,
+      requiredPlan,
+      message: `You have reached your monthly analysis limit. Upgrade to ${planName(requiredPlan)} to keep analyzing documents.`,
+    };
+  }
+  return { ok: true };
+}
+
+function finiteNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function usagePeriodIsCurrent() {
+  if (!state.usage.period) return true;
+  return state.usage.period === new Date().toISOString().slice(0, 7);
+}
+
+function nextPlanForQuota() {
+  const current = state.account?.plan || "free";
+  const currentIndex = planOrder.indexOf(current);
+  const nextIndex = currentIndex >= 0 ? currentIndex + 1 : 1;
+  return planOrder[Math.min(nextIndex, planOrder.length - 1)] || "starter";
 }
 
 function planButtonLabel(plan) {
@@ -1786,13 +1873,13 @@ function applyPalette() {
 }
 
 async function startAnalysis(useFile) {
+  if (useFile && !canStartDocumentAnalysis()) {
+    return;
+  }
   if (useFile && !state.file) {
     showErrorPopup("Choose a PDF, DOCX, TXT, or MD file first");
     state.screen = "upload";
     render();
-    return;
-  }
-  if (useFile && !requireClientFeature("document_analysis")) {
     return;
   }
   if (state.screen === "landing" && !state.sidebarOpen) {

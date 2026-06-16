@@ -219,7 +219,7 @@ const state = {
   authError: null,
   userId: "",
   userEmail: "",
-  sidebarOpen: true,
+  sidebarOpen: false,
   userMenuOpen: false,
   authModalOpen: false,
   recentChats: [],
@@ -273,10 +273,16 @@ function scrollEvaluationIntoView() {
 }
 
 function setScreen(screen) {
+  const previousScreen = state.screen;
   if (state.screen === "investor" && screen !== "investor") {
     stopInvestorAudio({ silent: true });
   }
   state.screen = screen;
+  if (screen === "landing") {
+    state.sidebarOpen = false;
+  } else if (previousScreen === "landing" && !state.sidebarOpen) {
+    state.sidebarOpen = true;
+  }
   render();
   resetViewportScroll();
 }
@@ -474,6 +480,13 @@ function renderLanding() {
         <a href="#about">About</a>
         <a href="#pricing">Pricing</a>
       </nav>
+      <div class="landing-auth-slot">
+        ${
+          state.isAuthenticated
+            ? ""
+            : `<button class="btn compact landing-login-button" data-action="open-auth-modal">${iconUser()}Log in</button>`
+        }
+      </div>
     </header>
     <section class="hero">
       <div class="hero-copy">
@@ -1528,6 +1541,9 @@ async function startAnalysis(useFile) {
     render();
     return;
   }
+  if (state.screen === "landing" && !state.sidebarOpen) {
+    state.sidebarOpen = true;
+  }
   state.screen = "analysis";
   state.analysisError = null;
   state.pendingSessionId = useFile ? "UPLOAD-PENDING" : demoResponse.sessionId;
@@ -1943,6 +1959,7 @@ async function handleAuthAction(action) {
     state.userId = credential.user?.uid || "";
     state.userEmail = credential.user?.email || email;
     state.authModalOpen = false;
+    state.sidebarOpen = true;
     state.screen = "upload";
     toast(action === "register" ? "Account created" : "Logged in");
   } catch (error) {
@@ -2037,6 +2054,7 @@ app.addEventListener("click", async (event) => {
     state.isAuthenticated = false;
     state.userId = "";
     state.userEmail = "";
+    state.sidebarOpen = false;
     state.screen = "landing";
     state.authLoading = false;
     render();

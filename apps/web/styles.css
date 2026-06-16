@@ -279,6 +279,14 @@ input:focus-visible {
 
 .landing-topbar {
   position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+}
+
+.landing-topbar .brand {
+  justify-self: start;
 }
 
 .section-anchor {
@@ -295,6 +303,7 @@ input:focus-visible {
   border: 1px solid var(--outline-variant);
   border-radius: 999px;
   background: color-mix(in srgb, var(--surface) 72%, transparent);
+  justify-self: center;
 }
 
 .landing-nav a {
@@ -314,6 +323,17 @@ input:focus-visible {
 .landing-nav a:hover {
   background: var(--surface-variant);
   color: var(--primary);
+}
+
+.landing-auth-slot {
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+  justify-self: stretch;
+}
+
+.landing-login-button {
+  white-space: nowrap;
 }
 
 .hero {
@@ -2553,11 +2573,14 @@ code {
   }
 
   .landing-topbar {
-    justify-content: center;
+    grid-template-columns: minmax(0, 1fr) auto;
+    justify-content: initial;
   }
 
   .landing-nav {
     order: 3;
+    grid-column: 1 / -1;
+    justify-self: stretch;
     width: 100%;
     overflow-x: auto;
   }

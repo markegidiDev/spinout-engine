@@ -1,7 +1,27 @@
-const API_BASE =
-  new URLSearchParams(window.location.search).get("api") ||
-  window.SPINOUT_API_BASE ||
-  "http://localhost:8080";
+const DEFAULT_API_BASE = window.SPINOUT_API_BASE || "http://localhost:8080";
+const API_BASE = resolveApiBase();
+
+function normalizeApiBase(base) {
+  return new URL(base, window.location.origin).toString().replace(/\/$/, "");
+}
+
+function isLocalFrontend() {
+  return ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
+}
+
+function resolveApiBase() {
+  const configuredApiBase = normalizeApiBase(DEFAULT_API_BASE);
+  const apiOverride = new URLSearchParams(window.location.search).get("api");
+  if (!apiOverride) return configuredApiBase;
+
+  const overrideApiBase = normalizeApiBase(apiOverride);
+  const configuredOrigin = new URL(configuredApiBase).origin;
+  const overrideOrigin = new URL(overrideApiBase).origin;
+  if (overrideOrigin === configuredOrigin || isLocalFrontend()) return overrideApiBase;
+
+  console.warn("Ignoring untrusted api override", overrideOrigin);
+  return configuredApiBase;
+}
 
 const firebaseConfig = window.SPINOUT_FIREBASE_CONFIG || {
   apiKey: "",

@@ -80,6 +80,10 @@ async def list_sessions(authorization: str | None = Header(default=None)) -> dic
 
 @router.post("/demo/analyze", response_model=DocumentAnalyzeResponse)
 async def demo_analyze() -> DocumentAnalyzeResponse:
+    settings = get_settings()
+    if not settings.ENABLE_DEMO_FIXTURES:
+        raise HTTPException(status_code=404, detail="Demo fixtures are disabled")
+
     session_id = str(uuid4())
     response = build_demo_response(session_id)
     response.documentId = "demo"
@@ -92,7 +96,10 @@ async def demo_analyze() -> DocumentAnalyzeResponse:
         section.sessionId = session_id
         section.documentId = response.documentId
         section.filename = response.filename
-    SESSION_STORE[session_id] = response.model_dump(mode="json", by_alias=True)
+    session_payload = response.model_dump(mode="json", by_alias=True)
+    session_payload.update({"demoSession": True, "createdAt": _now_iso()})
+    SESSION_STORE[session_id] = session_payload
+    _prune_demo_sessions(settings.DEMO_SESSION_STORE_LIMIT)
     return response
 
 
@@ -269,6 +276,16 @@ async def get_session(session_id: str, authorization: str | None = Header(defaul
             },
         )
     return session
+
+
+def _prune_demo_sessions(limit: int) -> None:
+    demo_session_ids = [
+        session_id
+        for session_id, session in SESSION_STORE.items()
+        if session.get("demoSession") is True
+    ]
+    for session_id in demo_session_ids[: max(0, len(demo_session_ids) - limit)]:
+        SESSION_STORE.pop(session_id, None)
 
 
 def _auth_context(authorization: str | None) -> AuthContext:

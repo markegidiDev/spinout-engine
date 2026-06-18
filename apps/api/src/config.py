@@ -47,6 +47,7 @@ class Settings(BaseSettings):
 
     MAX_UPLOAD_MB: int = Field(default=20, ge=1, le=100)
     ENABLE_DEMO_FIXTURES: bool = False
+    DEMO_SESSION_STORE_LIMIT: int = Field(default=20, ge=0, le=100)
     SAVE_AUDIO_TO_S3: bool = True
     REQUEST_TIMEOUT_SECONDS: int = Field(default=45, ge=5, le=120)
 
